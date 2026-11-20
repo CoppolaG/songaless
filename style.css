@@ -534,3 +534,19 @@ h3 { font-size: 1.08rem; font-weight: 700; }
 
 .cat.small-cat { padding: 10px 10px 12px; }
 .cat.small-cat .cat-icon { font-size: 1.2rem; }
+
+/* ---------- modalità sfida ---------- */
+.gmodes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gmode { display: flex; flex-direction: column; gap: 4px; text-align: left; background: var(--surface2); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; transition: border-color .2s, background .2s, transform .2s var(--ease); }
+.gmode:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.gmode b { font-size: .98rem; }
+.gmode span { font-size: .78rem; color: var(--muted); }
+.gmode.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.gmode.on span { color: rgba(0,0,0,.6); }
+.picks { margin-top: 14px; display: grid; gap: 8px; }
+.pick-row { display: grid; grid-template-columns: 44px 110px 1fr; align-items: center; gap: 10px; }
+.pick-row .portrait { width: 30px; height: auto; justify-self: center; }
+.pick-row b { text-transform: capitalize; }
+.pick-row input { margin: 0; }
+.pick-row .pick-info { grid-column: 3; font-size: .78rem; color: var(--muted); margin-top: -4px; }
+@media (max-width: 700px) { .gmodes { grid-template-columns: 1fr; } .pick-row { grid-template-columns: 36px 80px 1fr; } }

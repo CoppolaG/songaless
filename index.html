@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/lenis@1.3.27/dist/lenis.css">
-<link rel="stylesheet" href="style.css?v=mwp811a0">
+<link rel="stylesheet" href="style.css?v=mwp8qmjm">
 </head>
 <body>
 <!-- sfondo animato tipo "aurora" -->
@@ -261,7 +261,18 @@
       <p id="room-status" class="status"></p>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="setup-mode">
+      <div class="panel-head"><h3>Modalità</h3></div>
+      <div class="gmodes">
+        <button class="gmode on" data-gmode="classic"><b>🎯 Classica</b><span>Canzoni dalla categoria che scegli qui sotto</span></button>
+        <button class="gmode" data-gmode="shared"><b>⚔️ Sfida · stesso tema</b><span>Ognuno sceglie un artista o un genere, si gioca tutti su tutte le scelte</span></button>
+        <button class="gmode" data-gmode="own"><b>🧠 Sfida · ognuno il suo</b><span>Ognuno risponde solo alle canzoni della sua scelta: vince il vero esperto</span></button>
+      </div>
+      <div id="picks" class="picks hidden"></div>
+      <datalist id="pick-list"></datalist>
+    </div>
+
+    <div class="panel" id="setup-cat">
       <div class="panel-head"><h3>Categoria</h3></div>
       <div id="f-categories" class="cats"></div>
       <h4 class="f-title">Per genere <span class="muted small" style="text-transform:none;letter-spacing:0">· da tutti i mazzi spuntati, anche le playlist importate</span></h4>
@@ -476,11 +487,11 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="starter.js?v=mwp811a0"></script>
-<script src="app.js?v=mwp811a0"></script>
-<script src="chars.js?v=mwp811a0"></script>
-<script src="ragdoll.js?v=mwp811a0"></script>
-<script src="game.js?v=mwp811a0"></script>
-<script src="fx.js?v=mwp811a0"></script>
+<script src="starter.js?v=mwp8qmjm"></script>
+<script src="app.js?v=mwp8qmjm"></script>
+<script src="chars.js?v=mwp8qmjm"></script>
+<script src="ragdoll.js?v=mwp8qmjm"></script>
+<script src="game.js?v=mwp8qmjm"></script>
+<script src="fx.js?v=mwp8qmjm"></script>
 </body>
 </html>

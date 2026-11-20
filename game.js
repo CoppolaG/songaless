@@ -154,6 +154,7 @@ function rosterChips(selected, removable) {
 function renderPlayers() {
   $('#roster').innerHTML = rosterChips(players, true);
   renderSummary();
+  if (typeof renderModes === 'function' && gmode !== 'classic') renderModes();
 }
 $('#roster').addEventListener('click', (e) => {
   const del = e.target.closest('[data-del]');
@@ -200,7 +201,7 @@ function renderSetup() {
   const me = $('#host-name').value || store('myName') || '';
   $('#host-name').value = me;
   $('#host-roster').innerHTML = rosterChips([me], false);
-  renderPlayers(); renderRoom();
+  renderPlayers(); renderRoom(); renderModes();
 }
 function renderSummary() {
   const o = readOpts(false);
@@ -210,19 +211,100 @@ function renderSummary() {
   $('#setup-summary').textContent = who;
 }
 
-$('#game-start').addEventListener('click', () => {
+/* ============ Modalità sfida: ognuno sceglie un artista o un genere ============ */
+let gmode = store('gmode') || 'classic'; // classic | shared | own
+let picksText = store('picks') || {};
+const participants = () => (mode === 'online' ? (net.role === 'host' ? [...net.players.values()].map((p) => p.name) : []) : players.slice());
+const bucketLabel = (b) => `${b.icon} ${b.name}`;
+function parsePick(text) {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  const k = norm(t.replace(/^\p{Extended_Pictographic}\s*/u, ''));
+  const b = BUCKETS.find((x) => norm(x.name) === k || norm(bucketLabel(x)) === norm(t) || norm(x.name).split(' ')[0] === k);
+  if (b) return { type: 'bucket', id: b.id, label: bucketLabel(b) };
+  return { type: 'artist', name: t.slice(0, 60), label: `👤 ${t.slice(0, 60)}` };
+}
+function renderModes() {
+  $$('.gmode').forEach((b) => b.classList.toggle('on', b.dataset.gmode === gmode));
+  const ch = gmode !== 'classic';
+  $('#setup-cat').classList.toggle('hidden', ch);
+  $('#picks').classList.toggle('hidden', !ch);
+  if (!ch) return;
+  // suggerimenti: generi e artisti presenti nei mazzi (i più numerosi prima)
+  const arts = new Map();
+  for (const s of Object.values(decks).flat()) arts.set(s.artist, (arts.get(s.artist) || 0) + 1);
+  $('#pick-list').innerHTML = BUCKETS.map((b) => `<option value="${esc(bucketLabel(b))}">`).join('')
+    + [...arts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 400).map(([a]) => `<option value="${esc(a)}">`).join('');
+  const who = participants();
+  $('#picks').innerHTML = who.length
+    ? who.map((n) => `<div class="pick-row">${Ragdoll.portrait(lookByName(n), 30)}<b>${esc(n)}</b><input data-pick-for="${esc(n)}" list="pick-list" placeholder="Artista o genere (es. Drake, 🎤 Rap / Hip Hop)" value="${esc(picksText[n] || '')}"></div>`).join('')
+      + '<p class="muted small">Per un artista uso le sue canzoni nei mazzi più le sue più famose su Deezer, quindi vanno bene anche artisti che non sono nei mazzi.</p>'
+    : `<p class="muted small">${mode === 'online' ? 'Crea la stanza: qui compariranno i giocatori, e tu scegli per ognuno.' : 'Prima tocca i nomi di chi gioca.'}</p>`;
+}
+$$('.gmode').forEach((b) => b.addEventListener('click', () => { gmode = b.dataset.gmode; store('gmode', gmode); renderModes(); renderSummary(); }));
+$('#picks').addEventListener('input', (e) => {
+  const n = e.target.dataset.pickFor; if (!n) return;
+  picksText[n] = e.target.value; store('picks', picksText);
+});
+
+// canzoni per una scelta: dai mazzi + (per un artista) le sue più famose su Deezer
+const NOT_ORIGINAL = /\blive\b|remix|acoustic|instrumental|karaoke|sped up|slowed|versione/i;
+async function pickPool(pick) {
+  const out = []; const seen = new Set();
+  const add = (s) => { const k = `${norm(s.title)}|${norm(s.artist)}`; if (!s.id || seen.has(String(s.id)) || seen.has(k)) return; seen.add(String(s.id)); seen.add(k); out.push(s); };
+  const everything = Object.values(decks).flat();
+  if (pick.type === 'bucket') { everything.filter((s) => bucketOf(s) === pick.id).forEach(add); return out; }
+  const a = norm(pick.name);
+  everything.filter((s) => { const sa = norm(s.artist); return sa === a || (a.length > 3 && sa.includes(a)); }).forEach(add);
+  try {
+    const r = await dz('search/artist', { q: pick.name, limit: 10 });
+    const exact = (r.data || []).filter((x) => norm(x.name) === a);
+    const art = (exact.length ? exact : (r.data || []).slice(0, 1)).sort((x, y) => (y.nb_fan || 0) - (x.nb_fan || 0))[0];
+    if (art) {
+      const top = await dz(`artist/${art.id}/top`, { limit: 50 });
+      (top.data || []).filter((t) => t.readable !== false && !NOT_ORIGINAL.test(t.title)).map(toSong).forEach(add);
+    }
+  } catch { /* basta quello che c'è nei mazzi */ }
+  return out;
+}
+// prepara la sfida: null se manca qualcosa (e lo spiega)
+async function buildChallenge() {
+  const who = participants();
+  const picks = {}; const pools = {};
+  for (const n of who) {
+    const p = parsePick(picksText[n]);
+    if (!p) { alert(`${n} deve scegliere un artista o un genere.`); return null; }
+    picks[n] = p;
+  }
+  $('#game-start').disabled = true; $('#game-start').textContent = 'Preparo la sfida…';
+  try {
+    for (const n of who) pools[n] = await pickPool(picks[n]);
+  } finally { $('#game-start').disabled = false; $('#game-start').textContent = 'Inizia la partita'; }
+  const poor = who.filter((n) => pools[n].length < 3);
+  if (poor.length) { alert(`Troppo poche canzoni per: ${poor.map((n) => `${n} (${picks[n].label})`).join(', ')}. Prova un'altra scelta.`); return null; }
+  let shared = null;
+  if (gmode === 'shared') {
+    const seen = new Set(); shared = [];
+    for (const n of who) for (const s of pools[n]) if (!seen.has(String(s.id))) { seen.add(String(s.id)); shared.push(s); }
+  }
+  return { gmode, picks, pools, shared };
+}
+
+$('#game-start').addEventListener('click', async () => {
   const o = readOpts();
-  if (!basePool().length) { alert('Non ci sono canzoni: aggiungi o spunta un mazzo.'); go('settings', { tab: 'decks' }); return; }
-  if (!filteredPool().length) { alert('Nessuna canzone corrisponde a categoria e filtri: allargali un po\'.'); return; }
   player.ctx = player.ctx || new AudioContext(); // sbloccato da questo clic
   player.ctx.resume();
-  if (mode === 'local') {
-    if (!players.length) { alert('Tocca i nomi di chi gioca.'); return; }
-    localStart(o);
+  if (mode === 'local' && !players.length) { alert('Tocca i nomi di chi gioca.'); return; }
+  if (mode === 'online' && net.role !== 'host') { alert('Prima crea la stanza.'); return; }
+  let ch = null;
+  if (gmode === 'classic') {
+    if (!basePool().length) { alert('Non ci sono canzoni: aggiungi o spunta un mazzo.'); go('settings', { tab: 'decks' }); return; }
+    if (!filteredPool().length) { alert('Nessuna canzone corrisponde a categoria e filtri: allargali un po\'.'); return; }
   } else {
-    if (net.role !== 'host') { alert('Prima crea la stanza.'); return; }
-    hostStart(o);
+    ch = await buildChallenge();
+    if (!ch) return;
   }
+  if (mode === 'local') localStart(o, ch); else hostStart(o, ch);
 });
 
 // sceglie una canzone con anteprima disponibile (l'URL dell'anteprima scade: lo chiediamo fresco)
@@ -368,7 +450,7 @@ function handleVerdict(v) {
 }
 
 function act(msg) {
-  if (!R || R.done) return;
+  if (!R || R.done || R.spectator) return;
   if (mode === 'local') localHandle(msg);
   else if (net.role === 'host') hostHandle('host', msg);
   else net.send(msg);
@@ -624,7 +706,9 @@ function showEnd(scores, history, canRestart) {
   go('end');
   const sorted = [...scores].sort((a, b) => b.score - a.score);
   lastEnd = { sorted };
-  $('#end-winner').textContent = sorted[0] ? `🏆 Vince ${sorted[0].name}!` : 'Fine';
+  const best = sorted[0]?.score || 0;
+  const tied = sorted.filter((p) => p.score === best);
+  $('#end-winner').textContent = !sorted.length ? 'Fine' : best === 0 ? '😶 Nessuno ha fatto punti' : tied.length > 1 ? `🤝 Pareggio tra ${tied.map((p) => p.name).join(' e ')}!` : `🏆 Vince ${sorted[0].name}!`;
   // podio: secondo, primo, terzo
   $('#podium').innerHTML = [1, 0, 2].map((i) => {
     const p = sorted[i];
@@ -712,13 +796,14 @@ $('#end-again').addEventListener('click', () => go('setup'));
 /* ============ Modalità stesso schermo ============ */
 let game = null;
 const localScores = () => Object.entries(game.scores).map(([name, score]) => ({ name, score, streak: game.streak[name] || 0 }));
-function localStart(o) {
+function localStart(o, ch = null) {
   game = {
-    ...o, total: o.rounds * players.length, round: 0, players: players.slice(), cat: catIdNow(),
+    ...o, total: o.rounds * players.length, round: 0, players: players.slice(), cat: ch ? 'sfida' : catIdNow(),
     scores: Object.fromEntries(players.map((p) => [p, 0])), streak: {},
-    pool: filteredPool(), queue: [], history: [],
+    pool: ch?.shared || filteredPool(), queue: [], history: [], ch,
   };
   game.queue = shuffle(game.pool);
+  if (ch?.gmode === 'own') game.own = Object.fromEntries(game.players.map((p) => [p, { pool: ch.pools[p], queue: shuffle(ch.pools[p]) }]));
   localNextRound();
 }
 async function localNextRound() {
@@ -733,9 +818,10 @@ async function localNextRound() {
   game.player = game.players[(game.round - 1) % game.players.length];
   renderScores(localScores());
   $('#g-online-players').classList.add('hidden');
-  try { game.song = await pickSong(game); } catch (err) { go('game'); setFeedback('⚠️ ' + err.message, 'bad'); return; }
+  try { game.song = await pickSong(game.own ? game.own[game.player] : game); } catch (err) { go('game'); setFeedback('⚠️ ' + err.message, 'bad'); return; }
+  const pk = game.ch?.picks[game.player];
   await startRoundUI({
-    label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}`, who: game.player, streak: game.streak[game.player] || 0,
+    label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}${game.own && pk ? ` · ${pk.label}` : ''}`, who: game.player, streak: game.streak[game.player] || 0,
     steps: game.steps, offset: game.start === 'random' ? -1 : 0, preview: game.song.preview,
     genre: game.song.genres?.[0] || '', workMode: !!game.song.work?.length,
   });
@@ -797,6 +883,7 @@ function renderRoom() {
   $('#room-players').innerHTML = [...net.players.values()].map((p) =>
     `<span class="chip ${p.id === 'host' ? 'me' : ''}">${esc(p.name)}${p.id === 'host' ? ' (tu)' : ''}</span>`).join('');
   renderSummary();
+  if (gmode !== 'classic') renderModes();
 }
 
 $('#room-open').addEventListener('click', () => {
@@ -880,10 +967,16 @@ function sendStatus() {
   broadcast({ t: 'status', players: list });
 }
 
-function hostStart(o) {
+function hostStart(o, ch = null) {
   net.players.forEach((p) => { p.score = 0; p.streak = 0; });
-  hg = { ...o, cat: catIdNow(), total: o.songs, n: 0, pool: filteredPool(), queue: [], history: [], st: new Map(), status: 'loading' };
+  hg = { ...o, cat: ch ? 'sfida' : catIdNow(), total: o.songs, n: 0, pool: ch?.shared || filteredPool(), queue: [], history: [], st: new Map(), status: 'loading', ch };
   hg.queue = shuffle(hg.pool);
+  if (ch?.gmode === 'own') {
+    // a turno: ogni canzone è della scelta di un giocatore, e risponde solo lui
+    hg.order = Object.keys(ch.pools);
+    hg.own = Object.fromEntries(hg.order.map((n) => [n, { pool: ch.pools[n], queue: shuffle(ch.pools[n]) }]));
+    hg.total = Math.ceil(o.songs / hg.order.length) * hg.order.length;
+  }
   hostNextRound();
 }
 
@@ -891,13 +984,23 @@ async function hostNextRound() {
   clearInterval(hg.nextTimer);
   hg.n++;
   hg.status = 'loading';
-  try { hg.song = await pickSong(hg); } catch (err) { toast(err.message, 5000); return; }
+  let owner = null; let ownerId = null;
+  if (hg.own) {
+    // salta chi è uscito dalla stanza
+    for (let k = 0; k < hg.order.length && !ownerId; k++) {
+      owner = hg.order[(hg.n - 1 + k) % hg.order.length];
+      ownerId = [...net.players.values()].find((p) => p.name === owner)?.id || null;
+    }
+    if (!ownerId) { toast('Non c\'è più nessuno in stanza', 4000); return; }
+  }
+  try { hg.song = await pickSong(hg.own ? hg.own[owner] : hg); } catch (err) { toast(err.message, 5000); return; }
   hg.offset = hg.start === 'random' ? Math.random() * Math.max(0, 29.5 - hg.steps[hg.steps.length - 1]) : 0;
-  hg.st = new Map([...net.players.keys()].map((id) => [id, { step: 0, done: false, ok: false, pts: 0, hits: 0 }]));
+  const ids = ownerId ? [ownerId] : [...net.players.keys()];
+  hg.st = new Map(ids.map((id) => [id, { step: 0, done: false, ok: false, pts: 0, hits: 0 }]));
   hg.firstOk = false;
   hg.status = 'playing';
   const streaks = Object.fromEntries([...net.players.values()].map((p) => [p.name, p.streak]));
-  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks, genre: hg.song.genres?.[0] || '', workMode: !!hg.song.work?.length });
+  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks, genre: hg.song.genres?.[0] || '', workMode: !!hg.song.work?.length, owner, pickLabel: owner ? hg.ch.picks[owner].label : '' });
   sendStatus();
   clearTimeout(hg.timer);
   hg.timer = setTimeout(hostEndRound, (hg.time + 2) * 1000); // 2 s di margine per il caricamento
@@ -1025,7 +1128,17 @@ function clientOnMessage(msg) {
       break;
     case 'round':
       $('#g-online-players').classList.remove('hidden');
-      startRoundUI({ label: `Canzone ${msg.n}/${msg.total}`, turn: net.myName, who: net.myName, streak: msg.streaks?.[net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time, genre: String(msg.genre || '').slice(0, 40), workMode: !!msg.workMode });
+      {
+        const owner = msg.owner ? String(msg.owner).slice(0, 20) : null;
+        const label = String(msg.pickLabel || '').slice(0, 70);
+        const mine = !owner || owner === net.myName;
+        startRoundUI({
+          label: `Canzone ${msg.n}/${msg.total}`, turn: owner ? (mine ? `Tocca a te · ${label}` : `Tocca a ${owner} · ${label}`) : net.myName,
+          who: owner || net.myName, streak: msg.streaks?.[owner || net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time,
+          genre: String(msg.genre || '').slice(0, 40), workMode: !!msg.workMode,
+        }).then(() => { if (!mine && R) { R.spectator = true; lockRound(); setFeedback(`👀 Sta rispondendo ${owner}: puoi ascoltare, ma non rispondere`); } });
+        if (!mine) { R.spectator = true; lockRound(); }
+      }
       break;
     case 'verdict':
       handleVerdict(msg);
@@ -1044,9 +1157,9 @@ function clientOnMessage(msg) {
       renderScores(msg.scores);
       if (me) recordRound(net.myName, { ok: me.ok, t: me.t, song: msg.song, cat: msg.cat || 'custom', streak: me.streak });
       showReveal(msg.song, {
-        ok: !!me?.ok, streak: me?.streak || 0,
+        ok: me ? !!me.ok : !!msg.results[0]?.ok, streak: me?.streak || 0,
         actors: msg.results.map((r) => ({ name: r.name, ok: r.ok, hits: r.hits, record: r.name === net.myName })),
-        text: me?.ok ? `🎉 Indovinata in ${me.t} s · +${me.pts}` : '💩 Non l\'hai indovinata',
+        text: me ? (me.ok ? `🎉 Indovinata in ${me.t} s · +${me.pts}` : '💩 Non l\'hai indovinata') : (msg.results[0]?.ok ? `🎉 ${msg.results[0].name} l'ha indovinata in ${msg.results[0].t} s` : `💩 ${msg.results[0]?.name || 'Nessuno'} non l'ha indovinata`),
         results: msg.results, canNext: host,
         nextLabel: host ? (msg.last ? 'Classifica finale' : 'Prossima canzone') : 'In attesa dell\'host…',
       });
