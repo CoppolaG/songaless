@@ -27,7 +27,7 @@ function isCorrect(pick, song) {
 /* ============ Navigazione ============ */
 const currentScreen = () => $$('.screen').find((s) => !s.classList.contains('hidden'))?.id.replace('screen-', '');
 function go(name, opts = {}) {
-  if (name !== 'game') player.stop();
+  if (name !== 'game') { player.stop(); if (R?.av) { R.av.destroy(); R.av = null; } }
   const el = $('#screen-' + name);
   $$('.screen').forEach((s) => s.classList.toggle('hidden', s !== el));
   if (name === 'setup') { renderSetup(); renderFilters(); }
@@ -92,6 +92,8 @@ function readOpts(save = true) {
   if (save) store('opts', { ...o, steps: $('#opt-steps').value });
   return o;
 }
+$('#opt-gore').value = store('gore') || 'tanto';
+$('#opt-gore').addEventListener('change', (e) => { store('gore', e.target.value); toast('Impostazione salvata', 1200); });
 ['#opt-rounds', '#opt-songs', '#opt-steps', '#opt-start', '#opt-time'].forEach((s) =>
   $(s).addEventListener('change', () => { readOpts(true); toast('Regole salvate', 1200); }));
 
@@ -240,11 +242,15 @@ function setFeedback(msg, cls = '') {
 async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time }) {
   clearInterval(roundTimer);
   hideReveal(true);
-  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who };
+  const prevAv = R?.av;
+  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv };
   if (currentScreen() !== 'game') go('game');
   $('#g-round').textContent = label;
   $('#g-turn').textContent = turn || '';
-  $('#g-avatar').innerHTML = who ? Chars.svg(Chars.lookFor(who), { size: 110 }) : '';
+  if (R.av) R.av.destroy?.();
+  R.av = null; R.rag = null;
+  if (who && Ragdoll.available) { R.av = Ragdoll.stage($('#g-avatar'), { w: 150, h: 175 }); R.rag = Ragdoll.addRag(R.av, lookByName(who), 75, 1); }
+  else $('#g-avatar').innerHTML = who ? Ragdoll.portrait(lookByName(who), 80) : '';
   $('#g-streak').textContent = `🔥 ${streak}`;
   $('#g-streak').classList.toggle('hidden', streak < 2);
   FX('pop', $('#g-avatar'));
@@ -288,7 +294,7 @@ function handleVerdict(v) {
   if (!R || R.done) return;
   const label = v.kind === 'guess' ? v.title : v.kind === 'skip' ? 'Saltato' : 'Mi arrendo';
   R.attempts[R.step] = { type: v.ok ? 'right' : v.kind === 'guess' ? 'wrong' : 'skip', text: label };
-  if (!v.ok && v.kind !== 'giveup') { R.hits++; Chars.damage($('#g-avatar .char'), R.hits); } // perde un pezzo
+  if (!v.ok && v.kind !== 'giveup') { R.hits++; Ragdoll.damage(R.rag, R.hits); } // perde un pezzo
   if (v.ok) {
     R.done = true;
     setFeedback(`✓ Indovinata in ${R.steps[R.step]} s! +${v.pts}`, 'ok');
@@ -325,9 +331,12 @@ function guess(pick) {
 
 function renderScores(list, el = $('#g-scores')) {
   el.innerHTML = [...list].sort((a, b) => b.score - a.score)
-    .map((p) => `<li data-name="${esc(p.name)}"><span class="mini-av">${Chars.svg(p.look ? Chars.clean(p.look, p.name) : Chars.lookFor(p.name), { size: 22 })}</span>${esc(p.name)}${p.streak >= 2 ? `<em class="fire">🔥${p.streak}</em>` : ''}<span data-score="${p.score}">${p.score}</span></li>`).join('');
+    .map((p) => `<li data-name="${esc(p.name)}"><span class="mini-av">${Ragdoll.portrait(lookByName(p.name), 22)}</span>${esc(p.name)}${p.streak >= 2 ? `<em class="fire">🔥${p.streak}</em>` : ''}<span data-score="${p.score}">${p.score}</span></li>`).join('');
   FX('countScores', el);
 }
+
+// aspetto di un giocatore: online quello arrivato dalla stanza, altrimenti quello salvato su questo dispositivo
+const lookByName = (name) => (mode === 'online' && net.looks[name] ? net.looks[name] : Chars.lookFor(name));
 
 /* ============ Statistiche personali ============ */
 const CAT_NAMES = Object.fromEntries(CATEGORIES.map((c) => [c.id, `${c.icon} ${c.name}`]));
@@ -363,8 +372,8 @@ function renderStats() {
     const deaths = Object.values(s.deaths).reduce((a, b) => a + b, 0);
     const favDeath = Object.entries(s.deaths).sort((a, b) => b[1] - a[1])[0];
     return `<div class="stat-card spot">
-      <div class="stat-head">${Chars.svg(Chars.lookFor(s.name), { size: 56 })}<div><h3>${esc(s.name)}</h3><span class="muted small">${s.games} partite · ${s.wins} vinte</span></div>
-        <button class="reroll" data-reroll="${esc(s.name)}" title="Cambia aspetto">🎲</button></div>
+      <div class="stat-head">${Ragdoll.portrait(Chars.lookFor(s.name), 56)}<div><h3>${esc(s.name)}</h3><span class="muted small">${s.games} partite · ${s.wins} vinte</span></div>
+        <span class="stat-btns"><button class="reroll" data-reroll="${esc(s.name)}" title="Cambia aspetto">🎲</button><button class="reroll" data-photo="${esc(s.name)}" title="Usa una foto come faccia">📷</button>${Chars.lookFor(s.name).photo ? `<button class="reroll" data-nophoto="${esc(s.name)}" title="Togli la foto">✕</button>` : ''}</span></div>
       <div class="stat-nums">
         <div><b>${acc}%</b><span>indovinate</span></div>
         <div><b>${avg}${s.correct ? 's' : ''}</b><span>tempo medio</span></div>
@@ -374,7 +383,7 @@ function renderStats() {
         <li>Canzoni giocate: <b>${s.songs}</b> · indovinate: <b>${s.correct}</b></li>
         ${s.fastest ? `<li>Più veloce: <b>${esc(s.fastest.title)}</b> in <b>${s.fastest.t}s</b></li>` : ''}
         ${best ? `<li>Categoria migliore: <b>${esc(CAT_NAMES[best[0]] || 'Personalizzata')}</b> (${Math.round((best[1].correct / best[1].songs) * 100)}%)</li>` : ''}
-        <li>Morti: <b>💀 ${deaths}</b>${favDeath ? ` · più spesso <b>${esc(favDeath[0])}</b>` : ''}</li>
+        <li>Morti: <b>💀 ${deaths}</b>${favDeath ? ` · più spesso <b>${esc(Ragdoll.SHORT[favDeath[0]] || favDeath[0])}</b>` : ''}</li>
       </ul>
     </div>`;
   }).join('') || '<div class="empty">Ancora nessuna statistica: gioca una partita!</div>';
@@ -382,8 +391,21 @@ function renderStats() {
 }
 $('#stats-list').addEventListener('click', (e) => {
   const b = e.target.closest('[data-reroll]'); if (!b) return;
-  Chars.setLook(b.dataset.reroll, Chars.randomLook());
+  Chars.setLook(b.dataset.reroll, Chars.randomLook(Chars.lookFor(b.dataset.reroll)));
   renderStats();
+});
+let photoFor = null;
+$('#stats-list').addEventListener('click', (e) => {
+  const p = e.target.closest('[data-photo]');
+  if (p) { photoFor = p.dataset.photo; $('#photo-file').click(); return; }
+  const n = e.target.closest('[data-nophoto]');
+  if (n) { const l = Chars.lookFor(n.dataset.nophoto); delete l.photo; Chars.setLook(n.dataset.nophoto, l); renderStats(); }
+});
+$('#photo-file').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f || !photoFor) return;
+  try { const photo = await Chars.photoFromFile(f); Chars.setLook(photoFor, { ...Chars.lookFor(photoFor), photo }); renderStats(); toast('Faccia aggiornata 📷'); }
+  catch { toast('Non riesco a leggere questa immagine'); }
 });
 $('#stats-reset').addEventListener('click', () => {
   if (!confirm('Azzerare tutte le statistiche?')) return;
@@ -391,7 +413,7 @@ $('#stats-reset').addEventListener('click', () => {
 });
 
 /* ============ Rivelazione con animazione ============ */
-let revealSong = null; let revealRaf = null;
+let revealSong = null; let revealRaf = null; let revealStage = null;
 // actors: [{ name, look, ok, hits, record }] → i personaggini sul palco (vivi che ballano, gli altri fatti fuori)
 function showReveal(song, { ok, text, results = null, canNext = true, nextLabel = 'Prossima canzone', actors = [], streak = 0 }) {
   if (R) R.done = true;
@@ -399,20 +421,28 @@ function showReveal(song, { ok, text, results = null, canNext = true, nextLabel 
   revealSong = song;
   $('#rv-result').textContent = text;
   $('#rv-result').className = 'rv-result ' + (ok ? 'ok' : 'bad');
-  const size = actors.length > 3 ? 62 : actors.length > 1 ? 78 : 96;
-  $('#rv-stage').innerHTML = actors.map((a, i) => `<div class="actor" data-i="${i}">${Chars.svg(a.look ? Chars.clean(a.look, a.name) : Chars.lookFor(a.name), { size, missing: Math.min(4, a.hits || 0) })}${actors.length > 1 ? `<span>${esc(a.name)}</span>` : ''}</div>`).join('');
+  revealStage?.destroy();
+  revealStage = null;
+  const rags = [];
   $('#rv-stage').classList.toggle('hidden', !actors.length);
+  if (actors.length && Ragdoll.available) {
+    const W = Math.max(260, Math.min(376, innerWidth - 76));
+    const sc = actors.length > 4 ? 0.62 : actors.length > 2 ? 0.75 : 0.95;
+    revealStage = Ragdoll.stage($('#rv-stage'), { w: W, h: 200 });
+    actors.forEach((a, i) => rags.push(Ragdoll.addRag(revealStage, a.look || lookByName(a.name), (W / (actors.length + 1)) * (i + 1), sc, Math.min(4, a.hits || 0))));
+    if (actors.length > 1) $('#rv-stage').insertAdjacentHTML('beforeend', `<div class="stage-names">${actors.map((a) => `<span>${esc(a.name)}</span>`).join('')}</div>`);
+  }
   const cap = $('#rv-caption');
   cap.textContent = streak >= 2 && ok ? `🔥 Serie di ${streak} di fila!` : '';
   cap.className = 'rv-caption good';
   setTimeout(() => {
     const deathsTxt = [];
     actors.forEach((a, i) => {
-      const s = $(`#rv-stage .actor[data-i="${i}"] .char`);
-      if (a.ok) { Chars.dance(s); return; }
-      const type = Chars.kill(s);
+      const rg = rags[i];
+      if (a.ok) { Ragdoll.dance(rg); return; }
+      const type = Ragdoll.kill(rg);
       if (a.record) recordDeath(a.name, type);
-      deathsTxt.push(`${a.name} ${Chars.DEATH_LABEL[type]}`);
+      deathsTxt.push(`${a.name} ${Ragdoll.LABEL[type]}`);
     });
     if (deathsTxt.length) {
       cap.className = 'rv-caption';
@@ -450,6 +480,8 @@ function showReveal(song, { ok, text, results = null, canNext = true, nextLabel 
 }
 function hideReveal(instant) {
   if ($('#reveal').classList.contains('hidden')) return;
+  const old = revealStage; revealStage = null; // distruggiamo solo questo palco, non quello della prossima rivelazione
+  setTimeout(() => old?.destroy(), instant ? 0 : 400);
   cancelAnimationFrame(revealRaf);
   player.stop();
   window.lenis?.start();
@@ -532,7 +564,7 @@ $('#saved-clear').addEventListener('click', () => {
 });
 
 let lastEnd = null;
-const lookOf = (p) => (p.look ? Chars.clean(p.look, p.name) : Chars.lookFor(p.name));
+const lookOf = (p) => lookByName(p.name);
 function showEnd(scores, history, canRestart) {
   player.stop(); clearInterval(roundTimer); hideReveal(true);
   go('end');
@@ -545,7 +577,7 @@ function showEnd(scores, history, canRestart) {
     if (!p) return `<div class="pod p${i + 1} empty"></div>`;
     return `<div class="pod p${i + 1}">
       ${i === 0 ? '<span class="crown">👑</span>' : ''}
-      ${Chars.svg(lookOf(p), { size: i === 0 ? 96 : 76 })}
+      ${Ragdoll.portrait(lookOf(p), i === 0 ? 76 : 60)}
       <span class="who">${esc(p.name)}</span><span class="pts">${p.score} punti</span>
       <div class="step">${i + 1}</div></div>`;
   }).join('');
@@ -559,10 +591,7 @@ function showEnd(scores, history, canRestart) {
   FX('podium');
   // il primo balla, il terzo fa una brutta fine
   setTimeout(() => {
-    $$('#podium .pod:not(.empty) .char').forEach((c) => {
-      if (c.closest('.p1')) Chars.dance(c);
-      else if (c.closest('.p3')) Chars.kill(c);
-    });
+    FX('podiumChars');
   }, 1600);
 }
 
@@ -571,7 +600,7 @@ function svgImage(look, size) {
   return new Promise((res) => {
     const img = new Image();
     img.onload = () => res(img); img.onerror = () => res(null);
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Chars.svg(look, { size }));
+    img.src = Ragdoll.portraitURL(look, size);
   });
 }
 const siteLabel = () => (location.host + location.pathname).replace(/\/+$/, '');
@@ -687,6 +716,7 @@ const PEER_PREFIX = 'indovinalacanzone-';
 const net = {
   role: null, peer: null, conn: null, code: null, myName: '',
   players: new Map(), // solo host: id -> { id, name, conn, score }
+  looks: {}, // nome -> aspetto, per tutti
   send(msg) { try { this.conn?.open && this.conn.send(msg); } catch { /* connessione chiusa */ } },
   leave() {
     try { this.peer?.destroy(); } catch { /* già chiusa */ }
@@ -728,6 +758,7 @@ $('#room-open').addEventListener('click', () => {
     peer.on('open', () => {
       Object.assign(net, { role: 'host', peer, code });
       net.players = new Map([['host', { id: 'host', name, conn: null, score: 0, streak: 0, look: Chars.lookFor(name) }]]);
+      net.looks = { [name]: Chars.lookFor(name) };
       $('#room-status').textContent = isLocalHost()
         ? '⚠️ Sei sulla versione locale (127.0.0.1): per gli amici usa il sito online.'
         : '';
@@ -760,6 +791,7 @@ function hostOnConnection(conn) {
       net.players.set(conn.peer, { id: conn.peer, name, conn, score: 0, streak: 0, look: Chars.clean(msg.look, name) });
       conn.send({ t: 'welcome', name });
       broadcastLobby(); renderRoom();
+      broadcast({ t: 'looks', looks: Object.fromEntries([...net.players.values()].map((p) => [p.name, p.look])) });
       toast(`${name} è entrato`);
       if (hg && hg.status !== 'end') sendStatus();
       return;
@@ -782,13 +814,13 @@ function sendTo(p, msg) {
   else { try { p.conn.open && p.conn.send(msg); } catch { /* uscito */ } }
 }
 const broadcast = (msg) => net.players.forEach((p) => sendTo(p, msg));
-const scoreList = () => [...net.players.values()].map((p) => ({ name: p.name, score: p.score, streak: p.streak, look: p.look }));
+const scoreList = () => [...net.players.values()].map((p) => ({ name: p.name, score: p.score, streak: p.streak }));
 function broadcastLobby() { broadcast({ t: 'lobby', players: [...net.players.values()].map((p) => p.name) }); }
 
 function sendStatus() {
   const list = [...net.players.values()].map((p) => {
     const s = hg?.st.get(p.id);
-    return { name: p.name, score: p.score, streak: p.streak, look: p.look, state: !s ? 'wait' : s.ok ? 'ok' : s.done ? 'out' : 'play', t: s?.ok ? hg.steps[s.step] : null };
+    return { name: p.name, score: p.score, streak: p.streak, state: !s ? 'wait' : s.ok ? 'ok' : s.done ? 'out' : 'play', t: s?.ok ? hg.steps[s.step] : null };
   });
   broadcast({ t: 'status', players: list });
 }
@@ -852,7 +884,7 @@ function hostEndRound() {
   const results = [...net.players.values()].filter((p) => hg.st.has(p.id)).map((p) => {
     const s = hg.st.get(p.id);
     if (!s.ok) p.streak = 0;
-    return { name: p.name, look: p.look, ok: s.ok, t: s.ok ? hg.steps[s.step] : null, pts: s.pts, hits: s.hits, streak: p.streak };
+    return { name: p.name, ok: s.ok, t: s.ok ? hg.steps[s.step] : null, pts: s.pts, hits: s.hits, streak: p.streak };
   }).sort((a, b) => b.pts - a.pts);
   const winners = results.filter((r) => r.ok).map((r) => r.name);
   hg.history.push({ ...hg.song, note: winners.length ? `indovinata da ${winners.join(', ')}` : 'nessuno' });
@@ -930,6 +962,9 @@ function clientOnMessage(msg) {
       $('#join-status').textContent = '';
       FX('screenIn', $('#join-wait'));
       break;
+    case 'looks':
+      if (msg.looks && typeof msg.looks === 'object') for (const [n, l] of Object.entries(msg.looks)) net.looks[String(n).slice(0, 20)] = Chars.clean(l, n);
+      break;
     case 'lobby':
       $('#join-players').innerHTML = msg.players.map((n) => `<span class="chip ${n === net.myName ? 'me' : ''}">${esc(n)}</span>`).join('');
       break;
@@ -955,7 +990,7 @@ function clientOnMessage(msg) {
       if (me) recordRound(net.myName, { ok: me.ok, t: me.t, song: msg.song, cat: msg.cat || 'custom', streak: me.streak });
       showReveal(msg.song, {
         ok: !!me?.ok, streak: me?.streak || 0,
-        actors: msg.results.map((r) => ({ name: r.name, look: Chars.clean(r.look, r.name), ok: r.ok, hits: r.hits, record: r.name === net.myName })),
+        actors: msg.results.map((r) => ({ name: r.name, ok: r.ok, hits: r.hits, record: r.name === net.myName })),
         text: me?.ok ? `🎉 Indovinata in ${me.t} s · +${me.pts}` : '💩 Non l\'hai indovinata',
         results: msg.results, canNext: host,
         nextLabel: host ? (msg.last ? 'Classifica finale' : 'Prossima canzone') : 'In attesa dell\'host…',

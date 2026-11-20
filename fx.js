@@ -222,10 +222,27 @@
     tl.fromTo('#end-winner', { y: 30, autoAlpha: 0, scale: 0.9 }, { y: 0, autoAlpha: 1, scale: 1, duration: 0.6, ease: 'back.out(2)' })
       .fromTo('#podium .pod:not(.empty) .step', { scaleY: 0, transformOrigin: '50% 100%' },
         { scaleY: 1, duration: 0.7, stagger: { each: 0.18, from: 'end' }, ease: 'power3.out', clearProps: 'transform' }, '-=0.2')
-      .fromTo('#podium .pod:not(.empty) .char', { y: -220, autoAlpha: 0 },
+      .fromTo('#podium .pod:not(.empty) .portrait', { y: -220, autoAlpha: 0 },
         { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.15, ease: 'bounce.out' }, '-=0.3')
       .fromTo(['#podium .who', '#podium .pts', '#podium .crown'], { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.04, duration: 0.4 }, '-=0.4')
       .call(() => fx.celebrate());
+  };
+
+  // sul podio il primo saltella, il terzo... prende una bomba
+  fx.podiumChars = () => {
+    const p1 = document.querySelector('#podium .p1 .portrait');
+    const p3 = document.querySelector('#podium .p3 .portrait');
+    if (p1) gsap.to(p1, { y: -16, duration: 0.25, yoyo: true, repeat: 9, ease: 'power2.out' });
+    if (p3) {
+      const pod = p3.closest('.pod'); pod.style.position = 'relative';
+      const b = document.createElement('span'); b.textContent = '💣'; b.className = 'pod-fx';
+      pod.appendChild(b);
+      gsap.timeline()
+        .fromTo(b, { y: -260, rotation: 0 }, { y: 0, rotation: 200, duration: 0.6, ease: 'power2.in' })
+        .call(() => { b.textContent = '💥'; fx.shake(pod); })
+        .to(b, { scale: 3, autoAlpha: 0, duration: 0.5 })
+        .to(p3, { y: 30, rotation: 90, autoAlpha: 0.35, filter: 'grayscale(1) brightness(.5)', duration: 0.6, ease: 'bounce.out' }, '<');
+    }
   };
 
   // rivelazione della canzone

@@ -447,3 +447,19 @@ h3 { font-size: 1.08rem; font-weight: 700; }
   #g-avatar .char { width: 80px; height: 113px; }
   .podium { min-height: 260px; }
 }
+
+/* ---------- ragdoll ---------- */
+.portrait { display: block; }
+.mini-av { width: 22px; height: auto; }
+.mini-av .portrait { width: 22px; height: auto; }
+.stat-head .portrait { width: 56px; height: auto; flex: none; }
+.stat-btns { margin-left: auto; display: flex; gap: 4px; }
+.stat-head .reroll { margin-left: 0; }
+#g-avatar canvas { display: block; }
+.rv-stage { position: relative; min-height: 200px; width: 100%; display: flex; justify-content: center; margin: -6px 0 0; }
+.rv-stage canvas { display: block; }
+.stage-names { position: absolute; left: 0; right: 0; bottom: -18px; display: flex; justify-content: space-around; padding: 0 6%; font-size: .72rem; color: var(--muted); text-transform: capitalize; }
+.pod-fx { position: absolute; top: 20px; left: 50%; margin-left: -18px; font-size: 2.2rem; pointer-events: none; }
+.pod .portrait { filter: drop-shadow(0 10px 16px rgba(0,0,0,.4)); }
+@media (max-width: 600px) { #g-avatar canvas { width: 110px !important; height: 128px !important; } }
+.rv-stage + .rv-caption { margin-top: 24px; }
