@@ -531,6 +531,7 @@ const CATEGORIES = [
   { id: 'internazionali', icon: '🌍', name: 'Internazionali', desc: 'Dagli anni 60 al 2025', f: { decks: ['Hit internazionali'] } },
   { id: 'sigle', icon: '📺', name: 'Sigle cartoni', desc: 'Cartoni italiani e anime', f: { decks: ['Sigle cartoni e anime'] } },
   { id: 'film', icon: '🎬', name: 'Film e Disney', desc: 'Colonne sonore', f: { decks: ['Film e Disney'] } },
+  { id: 'sensational', icon: '🎤', name: 'Sensational', desc: 'Rap americano', f: { decks: ['Sensational'] } },
   { id: 'chicche', icon: '💎', name: 'Chicche', desc: 'Le meno famose', f: { pop: 'deep' } },
 ];
 const catFilters = (c) => ({ decks: [], decades: [], genres: [], artists: [], pop: 'all', ...structuredClone(c.f) });

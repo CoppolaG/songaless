@@ -26,6 +26,7 @@ async function dz(path, params = {}) {
 }
 
 async function find(artists, titles) {
+  const liveOk = titles.some((x) => LIVE.test(x)); // es. "Live From The Gutter": la parola fa parte del titolo
   const queries = [];
   for (const a of artists) for (const t of titles) queries.push(`artist:"${a}" track:"${t}"`, `${a} ${t}`);
   for (const q of queries) {
@@ -33,7 +34,7 @@ async function find(artists, titles) {
     const ok = res.filter((t) => t.readable !== false && t.preview
       && titles.some((x) => sameTitle(t.title_short || t.title, x))
       && artists.some((a) => sameArtist(t.artist?.name, a))
-      && !LIVE.test(t.title) && !LIVE.test(t.album?.title || ''));
+      && (liveOk || (!LIVE.test(t.title) && !LIVE.test(t.album?.title || ''))));
     if (ok.length) return { pick: ok.sort((a, b) => b.rank - a.rank)[0], all: ok };
   }
   return null;
