@@ -92,6 +92,8 @@ function readOpts(save = true) {
   if (save) store('opts', { ...o, steps: $('#opt-steps').value });
   return o;
 }
+$('#opt-sfx').value = store('sfx') === false ? 'off' : 'on';
+$('#opt-sfx').addEventListener('change', (e) => { store('sfx', e.target.value === 'on'); toast('Impostazione salvata', 1200); });
 $('#opt-gore').value = store('gore') || 'tanto';
 $('#opt-gore').addEventListener('change', (e) => { store('gore', e.target.value); toast('Impostazione salvata', 1200); });
 ['#opt-rounds', '#opt-songs', '#opt-steps', '#opt-start', '#opt-time'].forEach((s) =>
@@ -429,7 +431,7 @@ function showReveal(song, { ok, text, results = null, canNext = true, nextLabel 
     const W = Math.max(260, Math.min(376, innerWidth - 76));
     const sc = actors.length > 4 ? 0.62 : actors.length > 2 ? 0.75 : 0.95;
     revealStage = Ragdoll.stage($('#rv-stage'), { w: W, h: 200 });
-    actors.forEach((a, i) => rags.push(Ragdoll.addRag(revealStage, a.look || lookByName(a.name), (W / (actors.length + 1)) * (i + 1), sc, Math.min(4, a.hits || 0))));
+    actors.forEach((a, i) => rags.push(Ragdoll.addRag(revealStage, a.look || lookByName(a.name), (W / (actors.length + 1)) * (i + 1), sc, Math.min(8, a.hits || 0))));
     if (actors.length > 1) $('#rv-stage').insertAdjacentHTML('beforeend', `<div class="stage-names">${actors.map((a) => `<span>${esc(a.name)}</span>`).join('')}</div>`);
   }
   const cap = $('#rv-caption');
