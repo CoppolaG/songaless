@@ -16,7 +16,7 @@ Quiz musicale: ascolti un frammento di 0,1 secondi e provi a indovinare la canzo
 | `fx.js` | animazioni (GSAP, Lenis, coriandoli, visualizzatore, sfondo che reagisce alla musica) |
 | `chars.js` | aspetto dei personaggi e foto delle facce |
 | `ragdoll.js` | personaggi con fisica (matter.js): scheletro a 11 pezzi, ferite con ossa e spina dorsale, 14 morti, effetti sonori |
-| `catalogo.txt` | elenco dei mazzi di base (Artista \| Titolo \| Anno \| Genere) |
+| `catalogo.txt` | elenco dei mazzi di base (Artista | Titolo | Anno | Genere | Opera) |\| Titolo \| Anno \| Genere) |
 | `build-starter.mjs` | rigenera `starter.js` da `catalogo.txt`: `node build-starter.mjs` |
 
 ## Avvio in locale

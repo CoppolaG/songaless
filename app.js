@@ -627,7 +627,7 @@ function loadStarter() {
   let total = 0;
   for (const [name, songs] of Object.entries(window.STARTER_DECKS || {})) {
     const byId = new Map((decks[name] || []).map((s) => [String(s.id), s]));
-    for (const s of songs) { const old = byId.get(String(s.id)); if (old) Object.assign(old, { year: s.year, genres: s.genres, yearManual: true, meta: 1 }); }
+    for (const s of songs) { const old = byId.get(String(s.id)); if (old) Object.assign(old, { year: s.year, genres: s.genres, yearManual: true, meta: 1, ...(s.work ? { work: s.work } : {}) }); }
     total += addToDeck(name, songs.map((s) => ({ ...s })));
   }
   saveDecks();

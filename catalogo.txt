@@ -1,5 +1,6 @@
 # Catalogo di base del gioco.
-# "# Mazzo: Nome" apre un mazzo; poi una canzone per riga: Artista | Titolo | Anno originale | Genere
+# "# Mazzo: Nome" apre un mazzo; poi una canzone per riga: Artista | Titolo | Anno originale | Genere | Opera (facoltativa)
+# Opera = film, cartone o anime della canzone: in partita si indovina quella invece del titolo. "A / B" = nomi alternativi.
 # Dopo averlo modificato, rigenera starter.js con:  node build-starter.mjs
 
 # Mazzo: Hit internazionali
@@ -341,75 +342,75 @@ Mahmood | Tuta gold | 2024 | Pop
 Olly | Balorda nostalgia | 2025 | Pop
 
 # Mazzo: Film e Disney
-Samuel E. Wright | Under the Sea | 1989 | Colonne sonore
-Peabo Bryson | A Whole New World | 1992 | Colonne sonore
-Elton John | Can You Feel the Love Tonight | 1994 | Colonne sonore
-Nathan Lane | Hakuna Matata | 1994 | Colonne sonore
-Randy Newman | You've Got a Friend in Me | 1995 | Colonne sonore
-Phil Collins | You'll Be in My Heart | 1999 | Colonne sonore
-Idina Menzel | Let It Go | 2013 | Colonne sonore
-Irene Cara | Flashdance... What a Feeling | 1983 | Colonne sonore
-Ray Parker Jr. | Ghostbusters | 1984 | Colonne sonore
-Simple Minds | Don't You (Forget About Me) | 1985 | Colonne sonore
-Huey Lewis & The News | The Power of Love | 1985 | Colonne sonore
-Kenny Loggins | Danger Zone | 1986 | Colonne sonore
-Bill Medley | (I've Had) The Time of My Life | 1987 | Colonne sonore
-Survivor | Eye of the Tiger | 1982 | Colonne sonore
-Smash Mouth | All Star | 1999 | Colonne sonore
-Celine Dion | My Heart Will Go On | 1997 | Colonne sonore
-Hans Zimmer | Time | 2010 | Colonne sonore
-Adele | Skyfall | 2012 | Colonne sonore
-Justin Timberlake | CAN'T STOP THE FEELING! | 2016 | Colonne sonore
-Lady Gaga | Shallow | 2018 | Colonne sonore
-Billie Eilish | No Time To Die | 2020 | Colonne sonore
+Samuel E. Wright | Under the Sea | 1989 | Film d'animazione | La sirenetta / The Little Mermaid
+Peabo Bryson | A Whole New World | 1992 | Film d'animazione | Aladdin
+Elton John | Can You Feel the Love Tonight | 1994 | Film d'animazione | Il re leone / The Lion King
+Nathan Lane | Hakuna Matata | 1994 | Film d'animazione | Il re leone / The Lion King
+Randy Newman | You've Got a Friend in Me | 1995 | Film d'animazione | Toy Story
+Phil Collins | You'll Be in My Heart | 1999 | Film d'animazione | Tarzan
+Idina Menzel | Let It Go | 2013 | Film d'animazione | Frozen / Frozen - Il regno di ghiaccio
+Irene Cara | Flashdance... What a Feeling | 1983 | Colonne sonore | Flashdance
+Ray Parker Jr. | Ghostbusters | 1984 | Colonne sonore | Ghostbusters / Ghostbusters - Acchiappafantasmi / Acchiappafantasmi
+Simple Minds | Don't You (Forget About Me) | 1985 | Colonne sonore | The Breakfast Club / Breakfast Club
+Huey Lewis & The News | The Power of Love | 1985 | Colonne sonore | Ritorno al futuro / Back to the Future
+Kenny Loggins | Danger Zone | 1986 | Colonne sonore | Top Gun
+Bill Medley | (I've Had) The Time of My Life | 1987 | Colonne sonore | Dirty Dancing / Dirty Dancing - Balli proibiti
+Survivor | Eye of the Tiger | 1982 | Colonne sonore | Rocky III / Rocky
+Smash Mouth | All Star | 1999 | Film d'animazione | Shrek
+Celine Dion | My Heart Will Go On | 1997 | Colonne sonore | Titanic
+Hans Zimmer | Time | 2010 | Colonne sonore | Inception
+Adele | Skyfall | 2012 | Colonne sonore | Skyfall / 007 Skyfall / James Bond / 007
+Justin Timberlake | CAN'T STOP THE FEELING! | 2016 | Film d'animazione | Trolls
+Lady Gaga | Shallow | 2018 | Colonne sonore | A Star Is Born / È nata una stella
+Billie Eilish | No Time To Die | 2020 | Colonne sonore | No Time to Die / 007 No Time to Die / James Bond / 007
 
 # Mazzo: Sigle cartoni e anime
 # Anno vuoto = lo calcola lo script. "A / B" = nomi alternativi (es. titolo giapponese).
-Cristina D'Avena | Kiss Me Licia | 1985 | Sigle cartoni
-Cristina D'Avena | Occhi di gatto | 1985 | Sigle cartoni
-Cristina D'Avena | Mila e Shiro due cuori nella pallavolo | 1986 | Sigle cartoni
-Cristina D'Avena | Pollon, Pollon combinaguai | 1983 | Sigle cartoni
-Cristina D'Avena | Magica, magica Emi | 1986 | Sigle cartoni
-Cristina D'Avena | Sailor Moon | 1995 | Sigle cartoni
-Cristina D'Avena | Nanà Supergirl | 1984 | Sigle cartoni
-Cristina D'Avena | I Puffi sanno | 1985 | Sigle cartoni
-Cristina D'Avena | Doraemon | | Sigle cartoni
-Cristina D'Avena | Rossana | 1998 | Sigle cartoni
-Cristina D'Avena | Memole dolce Memole | 1985 | Sigle cartoni
-Cristina D'Avena | Lovely Sara | 1985 | Sigle cartoni
-Cristina D'Avena | Georgie | | Sigle cartoni
-Cristina D'Avena | Il mistero della pietra azzurra | | Sigle cartoni
-Cristina D'Avena | Piccoli problemi di cuore | | Sigle cartoni
-Cristina D'Avena | Hamtaro | | Sigle cartoni
-Giorgio Vanni | Pokémon | | Sigle cartoni
-Giorgio Vanni | Dragon Ball GT | 2001 | Sigle cartoni
-Giorgio Vanni | Detective Conan | 2001 | Sigle cartoni
-Giorgio Vanni | All'arrembaggio! | 2001 | Sigle cartoni
-Giorgio Vanni | Digimon | 2001 | Sigle cartoni
-Giorgio Vanni | Yu-Gi-Oh! | 2003 | Sigle cartoni
-Giorgio Vanni | Beyblade | | Sigle cartoni
-I Cavalieri del Re | Lady Oscar | 1982 | Sigle cartoni
-La Banda dei Bucanieri | Capitan Harlock | 1979 | Sigle cartoni
-Actarus | Atlas Ufo Robot / Ufo Robot | 1978 | Sigle cartoni
-Elisabetta Viviani | Heidi | 1978 | Sigle cartoni
-Yoko Takahashi / 高橋洋子 | A Cruel Angel's Thesis / 残酷な天使のテーゼ | 1995 | Sigle cartoni
-Seatbelts / シートベルツ | Tank! | 1998 | Sigle cartoni
-TK from Ling tosite sigure / TK from 凛として時雨 | unravel | 2014 | Sigle cartoni
-Linked Horizon | Guren no Yumiya / 紅蓮の弓矢 | 2013 | Sigle cartoni
-LiSA | Gurenge / 紅蓮華 | 2019 | Sigle cartoni
-Ikimonogakari / いきものがかり | Blue Bird / ブルーバード | 2008 | Sigle cartoni
-Hiroshi Kitadani / きただにひろし | We Are! / ウィーアー! | 1999 | Sigle cartoni
-Nightmare / ナイトメア | the WORLD | 2006 | Sigle cartoni
-YUI | again | 2009 | Sigle cartoni
-KANA-BOON | Silhouette / シルエット | 2014 | Sigle cartoni
-Eve | Kaikai Kitan / 廻廻奇譚 | 2020 | Sigle cartoni
-YOASOBI | Idol / アイドル | 2023 | Sigle cartoni
-Kenshi Yonezu / 米津玄師 | Peace Sign | 2017 | Sigle cartoni
-Kenshi Yonezu / 米津玄師 | KICK BACK | 2022 | Sigle cartoni
-nobodyknows+ | Hero's Come Back!! | 2007 | Sigle cartoni
-King Gnu | SPECIALZ | 2023 | Sigle cartoni
-Creepy Nuts | Bling-Bang-Bang-Born | 2024 | Sigle cartoni
-Creepy Nuts | Otonoke / オトノケ | 2024 | Sigle cartoni
-Official HIGE DANdism / Official髭男dism | Mixed Nuts | 2022 | Sigle cartoni
-Tatsuya Kitani / キタニタツヤ | Ao no Sumika / 青のすみか / Where Our Blue Is | 2023 | Sigle cartoni
-Mrs. GREEN APPLE | Inferno / インフェルノ | 2019 | Sigle cartoni
+Cristina D'Avena | Kiss Me Licia | 1985 | Sigle cartoni | Kiss Me Licia
+Cristina D'Avena | Occhi di gatto | 1985 | Sigle cartoni | Occhi di gatto / Cat's Eye
+Cristina D'Avena | Mila e Shiro due cuori nella pallavolo | 1986 | Sigle cartoni | Mila e Shiro / Mila e Shiro due cuori nella pallavolo / Attacker You
+Cristina D'Avena | Pollon, Pollon combinaguai | 1983 | Sigle cartoni | C'era una volta Pollon / Pollon
+Cristina D'Avena | Magica, magica Emi | 1986 | Sigle cartoni | Magica magica Emi / Magica Emi
+Cristina D'Avena | Sailor Moon | 1995 | Sigle cartoni | Sailor Moon
+Cristina D'Avena | Nanà Supergirl | 1984 | Sigle cartoni | Nanà Supergirl
+Cristina D'Avena | I Puffi sanno | 1985 | Sigle cartoni | I Puffi / Puffi / The Smurfs
+Cristina D'Avena | Doraemon |  | Sigle cartoni | Doraemon
+Cristina D'Avena | Rossana | 1998 | Sigle cartoni | Rossana / Kodocha
+Cristina D'Avena | Memole dolce Memole | 1985 | Sigle cartoni | Memole dolce Memole / Memole
+Cristina D'Avena | Lovely Sara | 1985 | Sigle cartoni | Lovely Sara / Princess Sarah
+Cristina D'Avena | Georgie |  | Sigle cartoni | Georgie
+Cristina D'Avena | Il mistero della pietra azzurra |  | Sigle cartoni | Il mistero della pietra azzurra / Nadia
+Cristina D'Avena | Piccoli problemi di cuore |  | Sigle cartoni | Piccoli problemi di cuore / Marmalade Boy
+Cristina D'Avena | Hamtaro |  | Sigle cartoni | Hamtaro
+Giorgio Vanni | Pokémon |  | Sigle cartoni | Pokémon / Pokemon
+Giorgio Vanni | Dragon Ball GT | 2001 | Sigle cartoni | Dragon Ball GT / Dragon Ball
+Giorgio Vanni | Detective Conan | 2001 | Sigle cartoni | Detective Conan / Case Closed
+Giorgio Vanni | All'arrembaggio! | 2001 | Sigle cartoni | One Piece
+Giorgio Vanni | Digimon | 2001 | Sigle cartoni | Digimon / Digimon Adventure
+Giorgio Vanni | Yu-Gi-Oh! | 2003 | Sigle cartoni | Yu-Gi-Oh!
+Giorgio Vanni | Beyblade |  | Sigle cartoni | Beyblade
+I Cavalieri del Re | Lady Oscar | 1982 | Sigle cartoni | Lady Oscar / Le rose di Versailles
+La Banda dei Bucanieri | Capitan Harlock | 1979 | Sigle cartoni | Capitan Harlock / Harlock
+Actarus | Atlas Ufo Robot / Ufo Robot | 1978 | Sigle cartoni | Goldrake / Ufo Robot Goldrake / Atlas Ufo Robot
+Elisabetta Viviani | Heidi | 1978 | Sigle cartoni | Heidi
+Yoko Takahashi / 高橋洋子 | A Cruel Angel's Thesis / 残酷な天使のテーゼ | 1995 | Sigle anime | Neon Genesis Evangelion / Evangelion
+Seatbelts / シートベルツ | Tank! | 1998 | Sigle anime | Cowboy Bebop
+TK from Ling tosite sigure / TK from 凛として時雨 | unravel | 2014 | Sigle anime | Tokyo Ghoul
+Linked Horizon | Guren no Yumiya / 紅蓮の弓矢 | 2013 | Sigle anime | L'attacco dei giganti / Attack on Titan / Shingeki no Kyojin
+LiSA | Gurenge / 紅蓮華 | 2019 | Sigle anime | Demon Slayer / Kimetsu no Yaiba
+Ikimonogakari / いきものがかり | Blue Bird / ブルーバード | 2008 | Sigle anime | Naruto Shippuden / Naruto
+Hiroshi Kitadani / きただにひろし | We Are! / ウィーアー! | 1999 | Sigle anime | One Piece
+Nightmare / ナイトメア | the WORLD | 2006 | Sigle anime | Death Note
+YUI | again | 2009 | Sigle anime | Fullmetal Alchemist: Brotherhood / Fullmetal Alchemist
+KANA-BOON | Silhouette / シルエット | 2014 | Sigle anime | Naruto Shippuden / Naruto
+Eve | Kaikai Kitan / 廻廻奇譚 | 2020 | Sigle anime | Jujutsu Kaisen
+YOASOBI | Idol / アイドル | 2023 | Sigle anime | Oshi no Ko
+Kenshi Yonezu / 米津玄師 | Peace Sign | 2017 | Sigle anime | My Hero Academia / Boku no Hero Academia
+Kenshi Yonezu / 米津玄師 | KICK BACK | 2022 | Sigle anime | Chainsaw Man
+nobodyknows+ | Hero's Come Back!! | 2007 | Sigle anime | Naruto Shippuden / Naruto
+King Gnu | SPECIALZ | 2023 | Sigle anime | Jujutsu Kaisen
+Creepy Nuts | Bling-Bang-Bang-Born | 2024 | Sigle anime | Mashle
+Creepy Nuts | Otonoke / オトノケ | 2024 | Sigle anime | Dandadan
+Official HIGE DANdism / Official髭男dism | Mixed Nuts | 2022 | Sigle anime | Spy x Family
+Tatsuya Kitani / キタニタツヤ | Ao no Sumika / 青のすみか / Where Our Blue Is | 2023 | Sigle anime | Jujutsu Kaisen
+Mrs. GREEN APPLE | Inferno / インフェルノ | 2019 | Sigle anime | Fire Force / Enen no Shouboutai

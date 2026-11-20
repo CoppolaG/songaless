@@ -54,7 +54,10 @@ async function guessYear(found, artist, title) {
   return ok.length ? Math.min(...ok) : null;
 }
 
-const cache = existsSync(here('.starter-cache.json')) ? JSON.parse(readFileSync(here('.starter-cache.json'), 'utf8')) : {};
+const rawCache = existsSync(here('.starter-cache.json')) ? JSON.parse(readFileSync(here('.starter-cache.json'), 'utf8')) : {};
+// la cache è indicizzata per "artista | titolo" (le vecchie chiavi erano la riga intera)
+const cache = {};
+for (const [k, v] of Object.entries(rawCache)) { const c = k.split('|').map((x) => x.trim()); cache[c.length > 2 ? `${c[0]} | ${c[1]}` : k] = v; }
 const decks = {};
 let deck = null;
 const missing = [];
@@ -63,10 +66,11 @@ for (const raw of readFileSync(here('catalogo.txt'), 'utf8').split(/\r?\n/)) {
   const m = line.match(/^#\s*Mazzo:\s*(.+)$/i);
   if (m) { deck = m[1].trim(); decks[deck] = []; continue; }
   if (!line || line.startsWith('#') || !deck) continue;
-  const [artistF, titleF, yearF, genre] = line.split('|').map((s) => s.trim());
+  const [artistF, titleF, yearF, genre, workF] = line.split('|').map((s) => s.trim());
+  const ckey = `${artistF} | ${titleF}`;
   const artists = artistF.split(' / ').map((s) => s.trim()).filter(Boolean);
   const titles = titleF.split(' / ').map((s) => s.trim()).filter(Boolean);
-  let song = cache[line];
+  let song = cache[ckey];
   if (!song) {
     const f = await find(artists, titles);
     if (!f) { missing.push(`${deck}: ${artistF} - ${titleF}`); console.log('✗', artistF, '-', titleF); continue; }
@@ -77,10 +81,11 @@ for (const raw of readFileSync(here('catalogo.txt'), 'utf8').split(/\r?\n/)) {
       cover: t.album?.cover_medium || '', albumId: t.album?.id, rank: t.rank,
       year: +yearF || await guessYear(f, artists[0], titles[0]), genres: [genre || 'Pop'], meta: 1, yearManual: true,
     };
-    cache[line] = song;
+    cache[ckey] = song;
     console.log('✓', artistF, '-', titleF, '→', t.artist.name, '-', t.title, `(${song.year}, ${t.rank})`);
   }
-  decks[deck].push(song);
+  const work = workF ? workF.split(' / ').map((x) => x.trim()).filter(Boolean) : null;
+  decks[deck].push({ ...song, year: +yearF || song.year, genres: [genre || 'Pop'], ...(work ? { work } : {}) });
 }
 
 writeFileSync(here('.starter-cache.json'), JSON.stringify(cache));

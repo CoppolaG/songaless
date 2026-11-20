@@ -17,8 +17,49 @@ function toast(msg, ms = 2600) {
 
 // confronto risposta: stesso id Deezer, oppure stesso titolo e artista (anche per titoli in giapponese)
 const keyOf = (s) => norm(s) || String(s || '').toLowerCase().replace(/\s+/g, '');
+/* ---- genere e "indovina l'opera" per film, cartoni e anime ---- */
+const GENRE_INFO = {
+  'Sigle cartoni': { label: '📺 Sigla di un cartone', cls: 'cartoon', ask: 'il cartone', of: 'del cartone', icon: '📺' },
+  'Sigle anime': { label: '🇯🇵 Sigla anime', cls: 'anime', ask: "l'anime", of: "dell'anime", icon: '🇯🇵' },
+  'Colonne sonore': { label: '🎬 Colonna sonora di un film', cls: 'film', ask: 'il film', of: 'del film', icon: '🎬' },
+  "Film d'animazione": { label: "🏰 Film d'animazione", cls: 'film', ask: 'il film', of: 'del film', icon: '🏰' },
+};
+const genreInfo = (g) => GENRE_INFO[g] || { label: g ? `🎵 ${g}` : '', cls: '', ask: null, of: '', icon: '🎬' };
+const workKey = (x) => keyOf(String(x || '').replace(/^(il|lo|la|i|gli|le|l'|the|un|una|uno)\s+/i, '').replace(/^l'/i, ''));
+function lev(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+// accetta anche piccoli errori di battitura ("naurto") e titoli quasi completi
+function matchWork(guess, work) {
+  const g = workKey(guess);
+  if (g.length < 2) return false;
+  return (work || []).some((w) => {
+    const k = workKey(w);
+    return k === g || (g.length >= 4 && k.includes(g) && g.length >= k.length * 0.5) || (k.length > 5 && lev(g, k) <= 2);
+  });
+}
+// titoli proposti mentre si scrive: tutte le opere dei mazzi + titoli "esca", così la lista non svela la risposta
+const DECOY_WORKS = ['Coco', 'Encanto', 'Oceania', 'Rapunzel', 'La bella e la bestia', 'Il libro della giungla', 'Mulan', 'Pocahontas', 'Hercules', 'Up', 'Cars',
+  'Alla ricerca di Nemo', 'Inside Out', 'Gli Incredibili', 'Ratatouille', 'Madagascar', "L'era glaciale", 'Cattivissimo me', 'Kung Fu Panda', 'Star Wars',
+  'Harry Potter', 'Il Signore degli Anelli', 'Jurassic Park', 'Grease', 'La La Land', 'Guardiani della Galassia', 'Avengers', 'Spider-Man', 'Batman',
+  'Pirati dei Caraibi', 'Il gladiatore', 'Interstellar', 'Mission: Impossible', 'Footloose', 'Pretty Woman', 'Forrest Gump', 'Matrix', 'Il padrino',
+  'Ken il guerriero', 'Holly e Benji', 'Lupin III', 'Candy Candy', "Jeeg Robot d'acciaio", 'Mazinga Z', 'Dragon Ball Z', 'Dragon Ball Super', 'Hunter x Hunter',
+  'Bleach', 'Fairy Tail', 'Haikyu!!', 'Sword Art Online', 'Tokyo Revengers', 'Blue Lock', 'Frieren', 'Solo Leveling', 'Mob Psycho 100', 'Inuyasha',
+  'Card Captor Sakura', 'Lamù', "L'incantevole Creamy", 'Hello! Spank', 'Remi', 'Dr. Slump e Arale', 'Gundam', "Le bizzarre avventure di JoJo", 'Yattaman',
+  'Tom & Jerry', 'I Simpson', 'SpongeBob', 'Winx Club', 'W.I.T.C.H.', 'Totally Spies', 'Ben 10', 'Gormiti', 'Mila e Shiro 2', 'Lilo & Stitch', 'Zootropolis', 'Wish'];
+function allWorks() {
+  const m = new Map();
+  for (const list of Object.values(decks)) for (const x of list) if (x.work?.length) m.set(workKey(x.work[0]), { title: x.work[0], alias: x.work });
+  for (const d of DECOY_WORKS) if (!m.has(workKey(d))) m.set(workKey(d), { title: d, alias: [d] });
+  return [...m.values()];
+}
+
 function isCorrect(pick, song) {
   if (!pick || !song) return false;
+  if (song.work?.length) return pick.work != null && matchWork(pick.work, song.work);
   if (String(pick.id) === String(song.id)) return true;
   const t = keyOf(pick.title);
   return !!t && t === keyOf(song.title) && keyOf(pick.artist) === keyOf(song.artist);
@@ -241,14 +282,20 @@ function setFeedback(msg, cls = '') {
   const f = $('#g-feedback'); f.textContent = msg; f.className = 'feedback ' + cls;
 }
 
-async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time }) {
+async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time, genre = '', workMode = false }) {
   clearInterval(roundTimer);
   hideReveal(true);
   const prevAv = R?.av;
-  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv };
+  const gi = genreInfo(genre);
+  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv, workMode, gi };
   if (currentScreen() !== 'game') go('game');
   $('#g-round').textContent = label;
   $('#g-turn').textContent = turn || '';
+  $('#g-genre').textContent = gi.label;
+  $('#g-genre').className = 'genre-pill ' + gi.cls;
+  $('#g-goal').textContent = workMode ? `🎯 Indovina ${gi.ask || 'il film'}` : '';
+  $('#g-guess').placeholder = workMode ? `Scrivi il nome ${gi.of || 'del film'}…` : 'Scrivi titolo o artista…';
+  FX('pop', $('#g-genre'));
   if (R.av) R.av.destroy?.();
   R.av = null; R.rag = null;
   if (who && Ragdoll.available) { R.av = Ragdoll.stage($('#g-avatar'), { w: 150, h: 175 }); R.rag = Ragdoll.addRag(R.av, lookByName(who), 75, 1); }
@@ -328,7 +375,7 @@ $('#g-skip').addEventListener('click', () => act({ t: 'skip' }));
 $('#g-giveup').addEventListener('click', () => act({ t: 'giveup' }));
 function guess(pick) {
   hideSuggest(); $('#g-guess').value = '';
-  act({ t: 'guess', pick: { id: pick.id, title: pick.title, artist: pick.artist } });
+  act({ t: 'guess', pick: pick.work != null ? { work: String(pick.work).slice(0, 120) } : { id: pick.id, title: pick.title, artist: pick.artist } });
 }
 
 function renderScores(list, el = $('#g-scores')) {
@@ -453,8 +500,9 @@ function showReveal(song, { ok, text, results = null, canNext = true, nextLabel 
     if (ok && streak >= 3) FX('fire');
   }, 650);
   $('#rv-cover').src = song.cover || '';
-  $('#rv-title').textContent = song.title;
-  $('#rv-artist').textContent = `${song.artist}${song.year ? ' · ' + song.year : ''}`;
+  const work = Array.isArray(song.work) && song.work.length ? String(song.work[0]) : '';
+  $('#rv-title').textContent = work || song.title;
+  $('#rv-artist').textContent = work ? `“${song.title}” · ${song.artist}${song.year ? ' · ' + song.year : ''}` : `${song.artist}${song.year ? ' · ' + song.year : ''}`;
   $('#rv-results').classList.toggle('hidden', !results);
   if (results) {
     $('#rv-results').innerHTML = results.map((r) =>
@@ -685,14 +733,15 @@ async function localNextRound() {
   await startRoundUI({
     label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}`, who: game.player, streak: game.streak[game.player] || 0,
     steps: game.steps, offset: game.start === 'random' ? -1 : 0, preview: game.song.preview,
+    genre: game.song.genres?.[0] || '', workMode: !!game.song.work?.length,
   });
 }
 function localHandle(msg) {
   const last = R.step >= R.steps.length - 1;
   let v;
-  if (msg.t === 'guess' && isCorrect(msg.pick, game.song)) v = { kind: 'guess', ok: true, pts: R.steps.length - R.step, title: msg.pick.title };
+  if (msg.t === 'guess' && isCorrect(msg.pick, game.song)) v = { kind: 'guess', ok: true, pts: R.steps.length - R.step, title: msg.pick.work || msg.pick.title };
   else if (msg.t === 'giveup') v = { kind: 'giveup', ok: false, done: true };
-  else v = { kind: msg.t, ok: false, done: last, step: R.step + 1, title: msg.pick?.title };
+  else v = { kind: msg.t, ok: false, done: last, step: R.step + 1, title: msg.pick?.work || msg.pick?.title };
   const stepAt = R.step;
   handleVerdict(v);
   if (!R.done) return;
@@ -844,7 +893,7 @@ async function hostNextRound() {
   hg.firstOk = false;
   hg.status = 'playing';
   const streaks = Object.fromEntries([...net.players.values()].map((p) => [p.name, p.streak]));
-  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks });
+  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks, genre: hg.song.genres?.[0] || '', workMode: !!hg.song.work?.length });
   sendStatus();
   clearTimeout(hg.timer);
   hg.timer = setTimeout(hostEndRound, (hg.time + 2) * 1000); // 2 s di margine per il caricamento
@@ -861,14 +910,14 @@ function hostHandle(pid, msg) {
     hg.firstOk = true;
     Object.assign(s, { ok: true, done: true, pts });
     p.score += pts; p.streak++;
-    v = { kind: 'guess', ok: true, pts, title: String(msg.pick.title || '') };
+    v = { kind: 'guess', ok: true, pts, title: String(msg.pick.work || msg.pick.title || '').slice(0, 120) };
   } else if (msg.t === 'giveup') {
     s.done = true;
     v = { kind: 'giveup', ok: false, done: true };
   } else if (msg.t === 'guess' || msg.t === 'skip') {
     s.hits++;
     if (s.step >= last) s.done = true; else s.step++;
-    v = { kind: msg.t, ok: false, done: s.done, step: s.step, title: String(msg.pick?.title || '').slice(0, 120) };
+    v = { kind: msg.t, ok: false, done: s.done, step: s.step, title: String(msg.pick?.work || msg.pick?.title || '').slice(0, 120) };
   } else return;
   sendTo(p, { t: 'verdict', ...v });
   sendStatus();
@@ -890,7 +939,7 @@ function hostEndRound() {
   }).sort((a, b) => b.pts - a.pts);
   const winners = results.filter((r) => r.ok).map((r) => r.name);
   hg.history.push({ ...hg.song, note: winners.length ? `indovinata da ${winners.join(', ')}` : 'nessuno' });
-  const song = { id: hg.song.id, title: hg.song.title, artist: hg.song.artist, cover: hg.song.cover, year: hg.song.year };
+  const song = { id: hg.song.id, title: hg.song.title, artist: hg.song.artist, cover: hg.song.cover, year: hg.song.year, work: hg.song.work || null };
   broadcast({ t: 'reveal', song, results, scores: scoreList(), last: hg.n >= hg.total, cat: hg.cat });
   let left = 15; // si va avanti da soli dopo 15 secondi
   clearInterval(hg.nextTimer);
@@ -972,7 +1021,7 @@ function clientOnMessage(msg) {
       break;
     case 'round':
       $('#g-online-players').classList.remove('hidden');
-      startRoundUI({ label: `Canzone ${msg.n}/${msg.total}`, turn: net.myName, who: net.myName, streak: msg.streaks?.[net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time });
+      startRoundUI({ label: `Canzone ${msg.n}/${msg.total}`, turn: net.myName, who: net.myName, streak: msg.streaks?.[net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time, genre: String(msg.genre || '').slice(0, 40), workMode: !!msg.workMode });
       break;
     case 'verdict':
       handleVerdict(msg);
@@ -1015,6 +1064,10 @@ function hideSuggest() { $('#g-suggest').classList.add('hidden'); suggestions = 
 function renderSuggest() {
   const ul = $('#g-suggest');
   if (!suggestions.length) { ul.classList.add('hidden'); return; }
+  if (R?.workMode) {
+    ul.innerHTML = suggestions.map((s, i) => `<li data-i="${i}" class="${i === sel ? 'sel' : ''}"><span class="s-kind">${R.gi.icon}</span><div>${esc(s.work)}</div></li>`).join('');
+    ul.classList.remove('hidden'); return;
+  }
   ul.innerHTML = suggestions.map((s, i) => `
     <li data-i="${i}" class="${i === sel ? 'sel' : ''}">
       <img src="${esc(s.cover)}" alt=""><div><div>${esc(s.title)}</div><div class="s-artist">${esc(s.artist)}</div></div>
@@ -1025,6 +1078,11 @@ $('#g-guess').addEventListener('input', (e) => {
   clearTimeout(debounce);
   const q = e.target.value.trim();
   if (q.length < 2) { hideSuggest(); return; }
+  if (R?.workMode) {
+    const k = workKey(q);
+    suggestions = allWorks().filter((w) => w.alias.some((a) => workKey(a).includes(k))).slice(0, 8).map((w) => ({ work: w.title }));
+    sel = -1; renderSuggest(); return;
+  }
   debounce = setTimeout(async () => {
     const my = ++searchSeq;
     try {
@@ -1042,6 +1100,7 @@ $('#g-guess').addEventListener('keydown', (e) => {
   if (e.key === 'ArrowDown' && suggestions.length) { sel = (sel + 1) % suggestions.length; renderSuggest(); e.preventDefault(); }
   else if (e.key === 'ArrowUp' && suggestions.length) { sel = (sel - 1 + suggestions.length) % suggestions.length; renderSuggest(); e.preventDefault(); }
   else if (e.key === 'Enter' && suggestions.length) { guess(suggestions[Math.max(sel, 0)]); e.preventDefault(); }
+  else if (e.key === 'Enter' && R?.workMode && e.target.value.trim()) { guess({ work: e.target.value.trim() }); e.preventDefault(); }
   else if (e.key === 'Escape') hideSuggest();
 });
 $('#g-suggest').addEventListener('mousedown', (e) => {
