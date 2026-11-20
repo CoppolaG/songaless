@@ -531,3 +531,6 @@ h3 { font-size: 1.08rem; font-weight: 700; }
   nav { gap: 4px; }
   .pill { padding: 7px 10px; }
 }
+
+.cat.small-cat { padding: 10px 10px 12px; }
+.cat.small-cat .cat-icon { font-size: 1.2rem; }

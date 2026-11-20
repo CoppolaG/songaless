@@ -477,7 +477,27 @@ function activePool() {
 /* ============ Filtri ============ */
 const WORLD_HIT = 800000; // "rank" Deezer: Bohemian Rhapsody ~960k, Levitating ~900k
 const MIN_DECADE_CHIP = 1990; // le epoche prima degli anni 90 non compaiono come categoria
-let filters = { decks: [], decades: [], genres: [], artists: [], pop: 'all', ...(store('filters') || {}) };
+// sezioni per genere: i nomi di Deezer ("Pop internazionale", "Trap", "Electro"…) raggruppati in poche famiglie
+const BUCKETS = [
+  { id: 'rap', icon: '🎤', name: 'Rap / Hip Hop', re: /rap|hip ?hop|trap|drill|grime/i },
+  { id: 'rnb', icon: '💜', name: 'R&B e Soul', re: /r&b|rnb|soul|funk/i },
+  { id: 'rock', icon: '🎸', name: 'Rock', re: /rock|metal|punk|grunge/i },
+  { id: 'dance', icon: '💃', name: 'Dance ed Elettronica', re: /dance|electro|elettronica|house|techno|edm|disco/i },
+  { id: 'alt', icon: '🌀', name: 'Alternative e Indie', re: /alternative|indie/i },
+  { id: 'latin', icon: '🌶️', name: 'Latina', re: /latin|reggaeton|salsa/i },
+  { id: 'reggae', icon: '🌴', name: 'Reggae', re: /reggae|dancehall/i },
+  { id: 'jazz', icon: '🎷', name: 'Jazz e Blues', re: /jazz|blues|swing/i },
+  { id: 'it', icon: '🇮🇹', name: 'Musica italiana', re: /italian/i },
+  { id: 'pop', icon: '🎵', name: 'Pop', re: /pop/i },
+];
+const NO_BUCKET = /sigle|colonne sonore|film/i; // sigle e film hanno già le loro categorie
+function bucketOf(s) {
+  const gs = s.genres || [];
+  if (!gs.length || gs.some((g) => NO_BUCKET.test(g))) return null;
+  for (const b of BUCKETS) if (gs.some((g) => b.re.test(g))) return b.id;
+  return null;
+}
+let filters = { decks: [], decades: [], genres: [], artists: [], pop: 'all', buckets: [], ...(store('filters') || {}) };
 const saveFilters = () => { store('filters', filters); renderFilters(); };
 const decadeOf = (y) => (y ? Math.floor(y / 10) * 10 : null);
 const decadeLabel = (d) => (d < 2000 ? `Anni ${String(d).slice(2)}` : `Anni ${d}`);
@@ -509,6 +529,7 @@ function filteredPool() {
   return pool.filter((s) => {
     if (filters.decades.length && !filters.decades.includes(decadeOf(s.year))) return false;
     if (filters.genres.length && !(s.genres || []).some((g) => filters.genres.includes(g))) return false;
+    if (filters.buckets.length && !filters.buckets.includes(bucketOf(s))) return false;
     if (filters.artists.length && !filters.artists.some((a) => norm(a) === norm(s.artist))) return false;
     if (filters.pop === 'world' && !((s.rank || 0) >= WORLD_HIT)) return false;
     if (filters.pop === 'top' && !top.has(s.id)) return false;
@@ -534,7 +555,7 @@ const CATEGORIES = [
   { id: 'sensational', icon: '🎤', name: 'Sensational', desc: 'Rap americano', f: { decks: ['Sensational'] } },
   { id: 'chicche', icon: '💎', name: 'Chicche', desc: 'Le meno famose', f: { pop: 'deep' } },
 ];
-const catFilters = (c) => ({ decks: [], decades: [], genres: [], artists: [], pop: 'all', ...structuredClone(c.f) });
+const catFilters = (c) => ({ decks: [], decades: [], genres: [], artists: [], pop: 'all', buckets: [], ...structuredClone(c.f) });
 const sameFilters = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function renderFilters() {
@@ -545,6 +566,12 @@ function renderFilters() {
     return `<button class="cat ${on ? 'on' : ''}" data-cat="${c.id}" ${missing ? 'disabled title="Mazzo non presente"' : ''}>
       <span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span><span class="cat-desc">${c.desc}</span></button>`;
   }).join('');
+
+  const bk = countBy(activePool(), (s) => [bucketOf(s)]);
+  $('#f-buckets').innerHTML = BUCKETS.filter((b) => bk.get(b.id)).map((b) => {
+    const on = sameFilters(filters, catFilters({ f: { buckets: [b.id] } }));
+    return `<button class="cat small-cat ${on ? 'on' : ''}" data-bucket="${b.id}"><span class="cat-icon">${b.icon}</span><span class="cat-name">${b.name}</span><span class="cat-desc">${bk.get(b.id)} canzoni</span></button>`;
+  }).join('') || '<span class="muted small">Appariranno quando le canzoni saranno catalogate.</span>';
 
   const decs = countBy(pool, (s) => [decadeOf(s.year)]);
   $('#f-decades').innerHTML = [...decs.keys()].filter((d) => d >= MIN_DECADE_CHIP).sort((a, b) => a - b).map((d) =>
@@ -568,6 +595,10 @@ function renderFilters() {
   renderSummary();
 }
 
+$('#f-buckets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bucket]'); if (!b) return;
+  filters = catFilters({ f: { buckets: [b.dataset.bucket] } }); saveFilters();
+});
 $('#f-categories').addEventListener('click', (e) => {
   const b = e.target.closest('[data-cat]'); if (!b || b.disabled) return;
   filters = catFilters(CATEGORIES.find((c) => c.id === b.dataset.cat)); saveFilters();
