@@ -18,6 +18,8 @@ Quiz musicale: ascolti un frammento di 0,1 secondi e provi a indovinare la canzo
 | `ragdoll.js` | personaggi con fisica (matter.js): scheletro a 11 pezzi, ferite con ossa e spina dorsale, 14 morti, effetti sonori |
 | `catalogo.txt` | elenco dei mazzi di base (Artista | Titolo | Anno | Genere | Opera) |\| Titolo \| Anno \| Genere) |
 | `build-starter.mjs` | rigenera `starter.js` da `catalogo.txt`: `node build-starter.mjs` |
+| `deepcut-app/` | sorgente di **Deep Cut** (Next.js): il gioco in cui scrivi la canzone più nascosta di un artista; vedi il suo README |
+| `deepcut/` | Deep Cut compilato, servito su /songaless/deepcut/ (si rigenera con `npm run publish` in `deepcut-app/`) |
 | `bump-version.mjs` | aggiorna il numero di versione dei file in `index.html` prima di pubblicare |
 
 ## Avvio in locale

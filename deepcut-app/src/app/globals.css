@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+/*
+ * I colori arrivano da src/design/tokens.ts come variabili --pal-* e --ui-*
+ * (iniettate in layout.tsx). Qui diventano classi Tailwind: bg-panel, text-ink...
+ */
+@theme inline {
+  --color-bg: var(--ui-bg);
+  --color-panel: var(--ui-panel);
+  --color-panel2: var(--ui-panel2);
+  --color-ink: var(--ui-ink);
+  --color-ink-dim: var(--ui-inkDim);
+  --color-edge: var(--ui-edge);
+  --color-shadow: var(--ui-shadow);
+  --color-accent: var(--ui-accent);
+  --color-accent2: var(--ui-accent2);
+  --color-ok: var(--ui-ok);
+  --color-bad: var(--ui-bad);
+
+  --font-pixel: var(--font-press), ui-monospace, monospace;
+  --font-text: var(--font-vt), ui-monospace, monospace;
+
+  /* niente bordi arrotondati, mai */
+  --radius-xs: 0; --radius-sm: 0; --radius-md: 0; --radius-lg: 0; --radius-xl: 0; --radius-2xl: 0; --radius-full: 0;
+}
+
+* { border-radius: 0 !important; image-rendering: pixelated; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ui-bg);
+  color: var(--ui-ink);
+  font-family: var(--font-text);
+  font-size: 22px;
+  line-height: 1.15;
+  overflow: hidden;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+}
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* ---------- bordi a gradini ----------
+   Le ombre spostate solo su un asse lasciano gli angoli vuoti: angolo a scalino. */
+.px-panel {
+  background: var(--ui-panel);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--ui-edge),
+    0 var(--px) 0 0 var(--ui-edge),
+    calc(var(--px) * -1) 0 0 0 var(--ui-edge),
+    var(--px) 0 0 0 var(--ui-edge),
+    0 calc(var(--px) * 3) 0 0 var(--ui-shadow),
+    calc(var(--px) * 2) calc(var(--px) * 2) 0 0 var(--ui-shadow),
+    calc(var(--px) * 2) var(--px) 0 0 var(--ui-shadow);
+}
+.px-inset {
+  background: var(--ui-shadow);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--ui-inkDim),
+    0 var(--px) 0 0 var(--ui-inkDim),
+    calc(var(--px) * -1) 0 0 0 var(--ui-inkDim),
+    var(--px) 0 0 0 var(--ui-inkDim);
+}
+.px-inset:focus-within { box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--ui-accent),
+    0 var(--px) 0 0 var(--ui-accent),
+    calc(var(--px) * -1) 0 0 0 var(--ui-accent),
+    var(--px) 0 0 0 var(--ui-accent); }
+
+.px-btn {
+  --btn: var(--ui-accent);
+  --btn-deep: var(--ui-accentDeep);
+  --btn-ink: var(--ui-shadow);
+  position: relative;
+  font-family: var(--font-pixel);
+  color: var(--btn-ink);
+  background: var(--btn);
+  border: 0;
+  cursor: pointer;
+  box-shadow:
+    inset 0 calc(var(--px) * -1) 0 0 var(--btn-deep),
+    0 calc(var(--px) * -1) 0 0 var(--ui-shadow),
+    0 var(--px) 0 0 var(--ui-shadow),
+    calc(var(--px) * -1) 0 0 0 var(--ui-shadow),
+    var(--px) 0 0 0 var(--ui-shadow),
+    0 calc(var(--px) * 2) 0 0 var(--ui-shadow);
+  transition: none;
+}
+.px-btn:hover { --btn: var(--pal-white); }
+.px-btn:active, .px-btn[data-pressed='true'] {
+  transform: translateY(var(--px));
+  box-shadow:
+    inset 0 var(--px) 0 0 var(--btn-deep),
+    0 calc(var(--px) * -1) 0 0 var(--ui-shadow),
+    0 var(--px) 0 0 var(--ui-shadow),
+    calc(var(--px) * -1) 0 0 0 var(--ui-shadow),
+    var(--px) 0 0 0 var(--ui-shadow);
+}
+.px-btn:disabled { opacity: .45; cursor: default; transform: none; }
+.px-btn.ghost { --btn: var(--ui-panel2); --btn-deep: var(--ui-panel); --btn-ink: var(--ui-ink); }
+.px-btn.ghost:hover { --btn: var(--pal-slate); }
+.px-btn.danger { --btn: var(--ui-accent2); --btn-deep: var(--ui-accent2Deep); }
+
+/* ---------- animazioni a scatti ---------- */
+@keyframes px-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--px) * -2)); } }
+.anim-float { animation: px-float 1.2s steps(2, jump-none) infinite; }
+
+@keyframes px-rise {
+  0% { transform: translateY(0); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-60vh); opacity: 0; }
+}
+.anim-rise { animation: px-rise var(--dur, 6s) steps(24) infinite; animation-delay: var(--delay, 0s); }
+
+@keyframes px-pop { 0% { transform: translateY(calc(var(--px) * 4)); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.anim-pop { animation: px-pop .2s steps(3) both; }
+
+@keyframes px-blink { 50% { opacity: 0; } }
+.anim-blink { animation: px-blink 1s steps(1) infinite; }
+
+@keyframes px-shake { 0%, 100% { transform: none; } 25% { transform: translateX(calc(var(--px) * -2)); } 75% { transform: translateX(calc(var(--px) * 2)); } }
+.anim-shake { animation: px-shake .28s steps(4); }
+
+@keyframes px-spin { to { transform: rotate(360deg); } }
+.anim-spin { animation: px-spin 1.6s steps(8) infinite; }
+
+/* ---------- scanline CRT ---------- */
+.crt {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 50;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pal-void) 22%, transparent) 0 2px,
+    transparent 2px 4px
+  );
+  mix-blend-mode: multiply;
+}
+.crt::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, color-mix(in srgb, var(--pal-void) 35%, transparent) 100%);
+}
+
+dialog::backdrop { background: color-mix(in srgb, var(--pal-void) 70%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-float, .anim-rise, .anim-blink, .anim-spin { animation: none; }
+  .anim-pop, .anim-shake { animation: none; }
+}
