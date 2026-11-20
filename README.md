@@ -1,0 +1,21 @@
+# Indovina la Canzone
+
+Quiz musicale: ascolti un frammento di 0,1 secondi e provi a indovinare la canzone; se sbagli, il frammento si allunga.
+
+- **Stesso schermo**: si gioca a turno dallo stesso dispositivo.
+- **Online**: chi ospita crea una stanza e condivide il link; ognuno gioca dal proprio dispositivo (connessione diretta tra browser con [PeerJS](https://peerjs.com/)).
+- Le anteprime audio arrivano da Deezer; gli anni originali sono incrociati con MusicBrainz.
+
+## File
+
+| File | Cosa contiene |
+|---|---|
+| `index.html`, `style.css` | pagina e grafica |
+| `app.js` | mazzi, import (Deezer/Spotify/artisti/lista), catalogazione, filtri |
+| `game.js` | partita locale e stanze online |
+| `catalogo.txt` | elenco dei mazzi di base (Artista \| Titolo \| Anno \| Genere) |
+| `build-starter.mjs` | rigenera `starter.js` da `catalogo.txt`: `node build-starter.mjs` |
+
+## Avvio in locale
+
+Doppio clic su `avvia.bat` (serve Python), poi apri http://127.0.0.1:8000

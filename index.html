@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indovina la Canzone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <button class="logo" data-go="home"><span class="logo-dot"></span>indovina<b>la canzone</b></button>
+  <nav>
+    <button data-go="home" class="pill">Gioca</button>
+    <button data-go="decks" class="pill">Mazzi</button>
+  </nav>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="screen-home" class="screen">
+    <div class="hero">
+      <p class="eyebrow">quiz musicale</p>
+      <h1>La riconosci in <span class="hl">0,1</span> secondi?</h1>
+      <p class="muted">Ascolta un frammento brevissimo e indovina la canzone. Se sbagli, il frammento si allunga.</p>
+    </div>
+    <div class="modes">
+      <button class="mode" data-mode="local">
+        <span class="mode-icon">🛋️</span>
+        <span class="mode-title">Stesso schermo</span>
+        <span class="mode-desc">Giocate a turno dallo stesso computer o dalla TV.</span>
+      </button>
+      <button class="mode" data-mode="online">
+        <span class="mode-icon">🌐</span>
+        <span class="mode-title">Online con gli amici</span>
+        <span class="mode-desc">Crea una stanza, condividi il link e sfidatevi ognuno dal suo dispositivo.</span>
+      </button>
+    </div>
+    <p class="center small muted"><span id="home-count"></span> · <button class="link" data-go="decks">gestisci i mazzi</button></p>
+  </section>
+
+  <!-- MAZZI -->
+  <section id="screen-decks" class="screen hidden">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>I tuoi mazzi</h2>
+        <p class="muted small">Ogni mazzo è una raccolta di canzoni. Spunta quelli da usare quando giochi.</p>
+      </div>
+      <div id="deck-list"></div>
+      <p class="enrich-status muted small"></p>
+      <div class="row">
+        <button id="deck-export" class="btn">Esporta</button>
+        <button id="deck-import-btn" class="btn">Importa file</button>
+        <button id="deck-starter" class="btn ghost">Rimetti i mazzi di base</button>
+        <input id="deck-import-file" type="file" accept=".json,application/json" class="hidden">
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Aggiungi canzoni</h2></div>
+      <label>Nome del mazzo
+        <input id="deck-name" placeholder="es. Anni 2000" list="deck-names">
+        <datalist id="deck-names"></datalist>
+      </label>
+      <div class="tabs">
+        <button class="tab active" data-tab="deezer">Playlist Deezer</button>
+        <button class="tab" data-tab="spotify">Playlist Spotify</button>
+        <button class="tab" data-tab="artist">Artista</button>
+        <button class="tab" data-tab="manual">Lista a mano</button>
+      </div>
+
+      <div class="tab-panel" data-panel="deezer">
+        <label>Link della playlist Deezer
+          <input id="dz-playlist" placeholder="https://www.deezer.com/it/playlist/1234567">
+        </label>
+        <button id="dz-import" class="btn primary">Importa</button>
+      </div>
+
+      <div class="tab-panel hidden" data-panel="spotify">
+        <div id="sp-logged-out">
+          <label>Spotify Client ID
+            <input id="sp-client" placeholder="incolla qui il Client ID della tua app Spotify">
+          </label>
+          <p class="muted small">Redirect URI da impostare nella app Spotify: <code id="sp-redirect"></code></p>
+          <button id="sp-login" class="btn primary">Accedi con Spotify</button>
+        </div>
+        <div id="sp-logged-in" class="hidden">
+          <label>Scegli una playlist
+            <select id="sp-playlists"></select>
+          </label>
+          <div class="row">
+            <button id="sp-import" class="btn primary">Importa</button>
+            <button id="sp-logout" class="btn ghost">Esci</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel hidden" data-panel="artist">
+        <label>Artisti (uno per riga)
+          <textarea id="artist-list" rows="4" placeholder="Vasco Rossi&#10;Dua Lipa"></textarea>
+        </label>
+        <label>Canzoni per artista
+          <input id="artist-n" type="number" value="15" min="1" max="50">
+        </label>
+        <button id="artist-import" class="btn primary">Importa le più famose</button>
+      </div>
+
+      <div class="tab-panel hidden" data-panel="manual">
+        <label>Una canzone per riga: <em>Artista - Titolo</em>
+          <textarea id="manual-list" rows="6" placeholder="Queen - Bohemian Rhapsody&#10;Måneskin - Zitti e buoni"></textarea>
+        </label>
+        <button id="manual-import" class="btn primary">Importa</button>
+      </div>
+
+      <div id="import-status" class="status"></div>
+    </div>
+  </section>
+
+  <!-- PREPARAZIONE PARTITA (locale o stanza online dell'host) -->
+  <section id="screen-setup" class="screen hidden">
+    <div id="setup-local" class="panel">
+      <div class="panel-head"><h2>Giocatori</h2><p class="muted small">Si gioca a turno: ognuno ha le sue canzoni.</p></div>
+      <div class="row">
+        <input id="player-name" placeholder="Nome giocatore">
+        <button id="player-add" class="btn">Aggiungi</button>
+      </div>
+      <div id="player-chips" class="chips"></div>
+    </div>
+
+    <div id="setup-online" class="panel hidden">
+      <div class="panel-head"><h2>La tua stanza</h2></div>
+      <div id="room-create">
+        <label>Il tuo nome
+          <input id="host-name" placeholder="Come ti vedono gli altri" maxlength="20">
+        </label>
+        <button id="room-open" class="btn primary">Crea la stanza</button>
+      </div>
+      <div id="room-info" class="hidden">
+        <p class="muted small">Manda questo link ai tuoi amici:</p>
+        <div class="share">
+          <input id="room-link" readonly>
+          <button id="room-copy" class="btn primary">Copia</button>
+        </div>
+        <p class="room-code">Codice stanza <b id="room-code"></b></p>
+        <h3 class="f-title">In stanza</h3>
+        <div id="room-players" class="chips"></div>
+      </div>
+      <p id="room-status" class="status"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Quali canzoni</h2><p class="muted small">Si pesca dai mazzi spuntati, poi si filtra qui. Nessuna voce selezionata = vanno bene tutte.</p></div>
+      <div class="presets">
+        <button data-preset="storiche">🏆 Hit storiche</button>
+        <button data-preset="recenti">🔥 Successi recenti</button>
+        <button data-preset="classici">📻 Classici (fino al '99)</button>
+        <button data-preset="chicche">💎 Chicche meno note</button>
+        <button data-preset="tutto" class="ghost">Azzera</button>
+      </div>
+
+      <h3 class="f-title">Epoca</h3>
+      <div id="f-decades" class="chips"></div>
+
+      <h3 class="f-title">Genere</h3>
+      <div id="f-genres" class="chips"></div>
+
+      <h3 class="f-title">Artisti</h3>
+      <div class="row">
+        <input id="f-artist-input" placeholder="Scrivi un artista dei tuoi mazzi…" list="f-artist-list">
+        <datalist id="f-artist-list"></datalist>
+        <button id="f-artist-add" class="btn">Aggiungi</button>
+      </div>
+      <div id="f-artists" class="chips"></div>
+
+      <h3 class="f-title">Popolarità</h3>
+      <select id="f-pop">
+        <option value="all">Tutte</option>
+        <option value="world">Solo hit mondiali (le più ascoltate in assoluto)</option>
+        <option value="top">Le più famose di ogni artista</option>
+        <option value="deep">Escludi le più famose (chicche)</option>
+      </select>
+
+      <p id="filter-count" class="filter-count"></p>
+      <p class="enrich-status muted small"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Regole</h2></div>
+      <div class="grid2">
+        <label><span id="opt-rounds-label">Round per giocatore</span>
+          <input id="opt-rounds" type="number" value="5" min="1" max="50">
+        </label>
+        <label id="opt-time-wrap" class="hidden">Tempo per canzone
+          <select id="opt-time">
+            <option value="20">20 secondi</option>
+            <option value="30" selected>30 secondi</option>
+            <option value="45">45 secondi</option>
+            <option value="60">60 secondi</option>
+          </select>
+        </label>
+      </div>
+      <label>Durate degli estratti (secondi, separati da virgola)
+        <input id="opt-steps" value="0.1, 0.5, 1, 2, 4, 8, 15">
+      </label>
+      <label>Da dove parte l'estratto
+        <select id="opt-start">
+          <option value="start">Inizio dell'anteprima</option>
+          <option value="random">Punto casuale dell'anteprima</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="sticky-start">
+      <p id="setup-summary" class="muted small"></p>
+      <button id="game-start" class="btn primary big">Inizia la partita</button>
+    </div>
+  </section>
+
+  <!-- INGRESSO IN STANZA (dal link) -->
+  <section id="screen-join" class="screen hidden">
+    <div class="panel narrow">
+      <p class="eyebrow">sei stato invitato</p>
+      <h2>Stanza <span id="join-code" class="hl"></span></h2>
+      <div id="join-form">
+        <label>Il tuo nome
+          <input id="join-name" placeholder="Come ti vedono gli altri" maxlength="20">
+        </label>
+        <button id="join-go" class="btn primary big">Entra</button>
+      </div>
+      <div id="join-wait" class="hidden">
+        <p class="muted">Sei dentro! Aspetta che chi ha creato la stanza avvii la partita.</p>
+        <h3 class="f-title">In stanza</h3>
+        <div id="join-players" class="chips"></div>
+      </div>
+      <p id="join-status" class="status"></p>
+    </div>
+  </section>
+
+  <!-- GIOCO -->
+  <section id="screen-game" class="screen hidden">
+    <div class="game">
+      <div class="game-head">
+        <span id="g-round" class="tag"></span>
+        <span id="g-turn" class="turn"></span>
+        <span id="g-timer" class="timer hidden"></span>
+      </div>
+
+      <div id="g-online-players" class="status-row hidden"></div>
+
+      <div id="g-steps" class="timebar"></div>
+
+      <button id="g-play" class="play" aria-label="Ascolta">
+        <svg viewBox="0 0 24 24" class="icon-play"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <p id="g-play-label" class="play-label"></p>
+
+      <div id="g-guess-area">
+        <div class="guess-wrap">
+          <input id="g-guess" placeholder="Scrivi titolo o artista…" autocomplete="off">
+          <ul id="g-suggest" class="suggest hidden"></ul>
+        </div>
+        <div class="row center">
+          <button id="g-skip" class="btn">Salta</button>
+          <button id="g-giveup" class="btn ghost">Mi arrendo</button>
+        </div>
+      </div>
+      <div id="g-reveal" class="reveal hidden">
+        <img id="r-cover" alt="">
+        <div class="reveal-body">
+          <div id="r-result" class="result"></div>
+          <div id="r-title" class="r-title"></div>
+          <div id="r-artist" class="muted"></div>
+          <div class="row">
+            <button id="r-listen" class="btn">🔊 Ascolta</button>
+            <button id="r-next" class="btn primary">Avanti</button>
+          </div>
+        </div>
+      </div>
+      <ol id="r-results" class="results hidden"></ol>
+      <p id="g-feedback" class="feedback"></p>
+      <ol id="g-attempts" class="attempts"></ol>
+    </div>
+
+    <div class="panel scores-panel">
+      <h3>Classifica</h3>
+      <ol id="g-scores" class="scores"></ol>
+    </div>
+  </section>
+
+  <!-- FINE -->
+  <section id="screen-end" class="screen hidden">
+    <div class="panel narrow center">
+      <p class="eyebrow">fine partita</p>
+      <h2 id="end-winner"></h2>
+      <ol id="end-scores" class="scores big"></ol>
+      <h3 class="f-title">Canzoni uscite</h3>
+      <ul id="end-history" class="history"></ul>
+      <button id="end-again" class="btn primary big">Gioca ancora</button>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="starter.js"></script>
+<script src="app.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

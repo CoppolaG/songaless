@@ -1,0 +1,364 @@
+# Catalogo di base del gioco.
+# "# Mazzo: Nome" apre un mazzo; poi una canzone per riga: Artista | Titolo | Anno originale | Genere
+# Dopo averlo modificato, rigenera starter.js con:  node build-starter.mjs
+
+# Mazzo: Hit internazionali
+The Beatles | Hey Jude | 1968 | Rock
+The Beatles | Let It Be | 1970 | Rock
+The Rolling Stones | (I Can't Get No) Satisfaction | 1965 | Rock
+Simon & Garfunkel | The Sound of Silence | 1965 | Pop
+The Beach Boys | Wouldn't It Be Nice | 1966 | Pop
+Ben E. King | Stand by Me | 1961 | R&B
+The Animals | The House of the Rising Sun | 1964 | Rock
+Aretha Franklin | Respect | 1967 | R&B
+Elvis Presley | Can't Help Falling in Love | 1961 | Pop
+Louis Armstrong | What a Wonderful World | 1967 | Jazz
+Frank Sinatra | My Way | 1969 | Jazz
+Nancy Sinatra | These Boots Are Made for Walkin' | 1966 | Pop
+The Doors | Light My Fire | 1967 | Rock
+ABBA | Dancing Queen | 1976 | Pop
+ABBA | Mamma Mia | 1975 | Pop
+Queen | Bohemian Rhapsody | 1975 | Rock
+Queen | We Will Rock You | 1977 | Rock
+Queen | Don't Stop Me Now | 1979 | Rock
+Bee Gees | Stayin' Alive | 1977 | Dance
+Gloria Gaynor | I Will Survive | 1978 | Dance
+Eagles | Hotel California | 1977 | Rock
+Led Zeppelin | Stairway to Heaven | 1971 | Rock
+Pink Floyd | Another Brick in the Wall, Pt. 2 | 1979 | Rock
+Fleetwood Mac | Dreams | 1977 | Rock
+Elton John | Your Song | 1970 | Pop
+Elton John | Rocket Man | 1972 | Pop
+David Bowie | Heroes | 1977 | Rock
+John Lennon | Imagine | 1971 | Pop
+Village People | YMCA | 1978 | Dance
+Boney M. | Rasputin | 1978 | Dance
+Bob Marley & The Wailers | Is This Love | 1978 | Reggae
+Lynyrd Skynyrd | Sweet Home Alabama | 1974 | Rock
+Donna Summer | I Feel Love | 1977 | Dance
+Earth, Wind & Fire | September | 1978 | R&B
+Stevie Wonder | Superstition | 1972 | R&B
+The Clash | London Calling | 1979 | Rock
+AC/DC | Highway to Hell | 1979 | Rock
+Dire Straits | Sultans of Swing | 1978 | Rock
+Michael Jackson | Billie Jean | 1982 | Pop
+Michael Jackson | Thriller | 1982 | Pop
+Michael Jackson | Beat It | 1982 | Pop
+Toto | Africa | 1982 | Rock
+a-ha | Take On Me | 1985 | Pop
+Queen | Another One Bites the Dust | 1980 | Rock
+Queen | Under Pressure | 1981 | Rock
+Survivor | Eye of the Tiger | 1982 | Rock
+Europe | The Final Countdown | 1986 | Rock
+Bon Jovi | Livin' on a Prayer | 1986 | Rock
+Guns N' Roses | Sweet Child O' Mine | 1987 | Rock
+Journey | Don't Stop Believin' | 1981 | Rock
+Madonna | Like a Prayer | 1989 | Pop
+Madonna | Like a Virgin | 1984 | Pop
+Cyndi Lauper | Girls Just Want to Have Fun | 1983 | Pop
+Whitney Houston | I Wanna Dance with Somebody (Who Loves Me) | 1987 | Pop
+Prince | Purple Rain | 1984 | Pop
+Rick Astley | Never Gonna Give You Up | 1987 | Pop
+Tears for Fears | Everybody Wants to Rule the World | 1985 | Pop
+Wham! | Last Christmas | 1984 | Pop
+Wham! | Wake Me Up Before You Go-Go | 1984 | Pop
+Eurythmics | Sweet Dreams (Are Made of This) | 1983 | Pop
+Kenny Loggins | Footloose | 1984 | Pop
+Dire Straits | Money for Nothing | 1985 | Rock
+The Police | Every Breath You Take | 1983 | Rock
+U2 | With or Without You | 1987 | Rock
+Phil Collins | In the Air Tonight | 1981 | Pop
+AC/DC | Back in Black | 1980 | Rock
+Depeche Mode | Just Can't Get Enough | 1981 | Electro
+Duran Duran | Hungry Like the Wolf | 1982 | Pop
+Bonnie Tyler | Total Eclipse of the Heart | 1983 | Pop
+George Michael | Careless Whisper | 1984 | Pop
+Lionel Richie | Hello | 1984 | R&B
+The Cure | Just Like Heaven | 1987 | Alternative
+Kate Bush | Running Up That Hill (A Deal with God) | 1985 | Pop
+Van Halen | Jump | 1984 | Rock
+Pet Shop Boys | West End Girls | 1985 | Electro
+Nirvana | Smells Like Teen Spirit | 1991 | Rock
+Oasis | Wonderwall | 1995 | Rock
+Oasis | Don't Look Back in Anger | 1996 | Rock
+Britney Spears | ...Baby One More Time | 1998 | Pop
+Backstreet Boys | I Want It That Way | 1999 | Pop
+Spice Girls | Wannabe | 1996 | Pop
+Whitney Houston | I Will Always Love You | 1992 | Pop
+Celine Dion | My Heart Will Go On | 1997 | Pop
+Mariah Carey | All I Want for Christmas Is You | 1994 | Pop
+R.E.M. | Losing My Religion | 1991 | Rock
+Red Hot Chili Peppers | Californication | 1999 | Rock
+Red Hot Chili Peppers | Under the Bridge | 1992 | Rock
+The Cranberries | Zombie | 1994 | Rock
+Coolio | Gangsta's Paradise | 1995 | Rap/Hip Hop
+2Pac | California Love | 1995 | Rap/Hip Hop
+Haddaway | What Is Love | 1993 | Dance
+Aqua | Barbie Girl | 1997 | Dance
+Ricky Martin | Livin' la Vida Loca | 1999 | Pop
+No Doubt | Don't Speak | 1995 | Rock
+Alanis Morissette | Ironic | 1995 | Rock
+TLC | No Scrubs | 1999 | R&B
+Radiohead | Creep | 1992 | Alternative
+Blur | Song 2 | 1997 | Rock
+The Verve | Bitter Sweet Symphony | 1997 | Rock
+Green Day | Basket Case | 1994 | Rock
+Lou Bega | Mambo No. 5 | 1999 | Pop
+Bryan Adams | (Everything I Do) I Do It for You | 1991 | Pop
+Metallica | Enter Sandman | 1991 | Rock
+Guns N' Roses | November Rain | 1991 | Rock
+Depeche Mode | Enjoy the Silence | 1990 | Electro
+Snap! | Rhythm Is a Dancer | 1992 | Dance
+Ace of Base | All That She Wants | 1992 | Pop
+Fugees | Killing Me Softly With His Song | 1996 | Rap/Hip Hop
+Cher | Believe | 1998 | Pop
+Eminem | The Real Slim Shady | 2000 | Rap/Hip Hop
+Eminem | Lose Yourself | 2002 | Rap/Hip Hop
+Eminem | Without Me | 2002 | Rap/Hip Hop
+Linkin Park | In the End | 2000 | Rock
+Linkin Park | Numb | 2003 | Rock
+The White Stripes | Seven Nation Army | 2003 | Rock
+The Killers | Mr. Brightside | 2003 | Rock
+Beyoncé | Crazy in Love | 2003 | R&B
+Outkast | Hey Ya! | 2003 | Rap/Hip Hop
+Shakira | Hips Don't Lie | 2006 | Pop
+Shakira | Whenever, Wherever | 2001 | Pop
+Rihanna | Umbrella | 2007 | Pop
+Black Eyed Peas | I Gotta Feeling | 2009 | Pop
+Lady Gaga | Poker Face | 2008 | Pop
+Lady Gaga | Bad Romance | 2009 | Pop
+Coldplay | Fix You | 2005 | Rock
+Coldplay | The Scientist | 2002 | Rock
+Coldplay | Yellow | 2000 | Rock
+Amy Winehouse | Rehab | 2006 | R&B
+Gnarls Barkley | Crazy | 2006 | R&B
+Kanye West | Stronger | 2007 | Rap/Hip Hop
+Daft Punk | One More Time | 2000 | Electro
+Daft Punk | Harder, Better, Faster, Stronger | 2001 | Electro
+Britney Spears | Toxic | 2003 | Pop
+Kelly Clarkson | Since U Been Gone | 2004 | Pop
+Avril Lavigne | Complicated | 2002 | Pop
+Green Day | Boulevard of Broken Dreams | 2004 | Rock
+Nelly Furtado | Maneater | 2006 | Pop
+Usher | Yeah! | 2004 | R&B
+50 Cent | In da Club | 2003 | Rap/Hip Hop
+Katy Perry | I Kissed a Girl | 2008 | Pop
+Leona Lewis | Bleeding Love | 2007 | Pop
+Kings of Leon | Sex on Fire | 2008 | Rock
+Gorillaz | Feel Good Inc. | 2005 | Alternative
+Shaggy | It Wasn't Me | 2000 | Reggae
+Las Ketchup | The Ketchup Song (Asereje) | 2002 | Pop
+Bob Sinclar | Love Generation | 2005 | Dance
+James Blunt | You're Beautiful | 2004 | Pop
+Timbaland | Apologize | 2007 | Pop
+Alicia Keys | Fallin' | 2001 | R&B
+Justin Timberlake | SexyBack | 2006 | Pop
+Nickelback | How You Remind Me | 2001 | Rock
+Evanescence | Bring Me to Life | 2003 | Rock
+System of a Down | Chop Suey! | 2001 | Rock
+Muse | Supermassive Black Hole | 2006 | Rock
+Adele | Rolling in the Deep | 2010 | Pop
+Adele | Someone Like You | 2011 | Pop
+Adele | Hello | 2015 | Pop
+Ed Sheeran | Shape of You | 2017 | Pop
+Ed Sheeran | Perfect | 2017 | Pop
+Mark Ronson | Uptown Funk | 2014 | Pop
+Bruno Mars | Just the Way You Are | 2010 | Pop
+Bruno Mars | 24K Magic | 2016 | Pop
+Pharrell Williams | Happy | 2013 | Pop
+Daft Punk | Get Lucky | 2013 | Electro
+Luis Fonsi | Despacito | 2017 | Latina
+Gotye | Somebody That I Used to Know | 2011 | Alternative
+Avicii | Wake Me Up | 2013 | Dance
+Avicii | Levels | 2011 | Dance
+Imagine Dragons | Radioactive | 2012 | Rock
+Imagine Dragons | Believer | 2017 | Rock
+The Weeknd | Blinding Lights | 2019 | Pop
+The Weeknd | Starboy | 2016 | R&B
+Taylor Swift | Shake It Off | 2014 | Pop
+Taylor Swift | Blank Space | 2014 | Pop
+Katy Perry | Roar | 2013 | Pop
+Rihanna | Diamonds | 2012 | Pop
+Rihanna | We Found Love | 2011 | Dance
+LMFAO | Party Rock Anthem | 2011 | Dance
+PSY | Gangnam Style | 2012 | Pop
+Carly Rae Jepsen | Call Me Maybe | 2011 | Pop
+Billie Eilish | bad guy | 2019 | Pop
+Lil Nas X | Old Town Road | 2019 | Rap/Hip Hop
+Drake | God's Plan | 2018 | Rap/Hip Hop
+Drake | Hotline Bling | 2015 | Rap/Hip Hop
+Kendrick Lamar | HUMBLE. | 2017 | Rap/Hip Hop
+Post Malone | Circles | 2019 | Pop
+Justin Bieber | Sorry | 2015 | Pop
+Sia | Chandelier | 2014 | Pop
+Sia | Cheap Thrills | 2016 | Pop
+Major Lazer | Lean On | 2015 | Dance
+Clean Bandit | Rather Be | 2014 | Dance
+Calvin Harris | Summer | 2014 | Dance
+The Chainsmokers | Closer | 2016 | Dance
+Dua Lipa | New Rules | 2017 | Pop
+Dua Lipa | Don't Start Now | 2019 | Pop
+Camila Cabello | Havana | 2017 | Pop
+Arctic Monkeys | Do I Wanna Know? | 2013 | Alternative
+Lorde | Royals | 2013 | Pop
+OneRepublic | Counting Stars | 2013 | Pop
+Maroon 5 | Moves Like Jagger | 2011 | Pop
+Passenger | Let Her Go | 2012 | Pop
+Hozier | Take Me to Church | 2013 | Alternative
+Twenty One Pilots | Stressed Out | 2015 | Alternative
+Wiz Khalifa | See You Again | 2015 | Rap/Hip Hop
+Tones and I | Dance Monkey | 2019 | Pop
+Dua Lipa | Levitating | 2020 | Pop
+Harry Styles | As It Was | 2022 | Pop
+Harry Styles | Watermelon Sugar | 2019 | Pop
+Olivia Rodrigo | drivers license | 2021 | Pop
+Olivia Rodrigo | good 4 u | 2021 | Pop
+Miley Cyrus | Flowers | 2023 | Pop
+Glass Animals | Heat Waves | 2020 | Alternative
+The Kid LAROI | STAY | 2021 | Pop
+Doja Cat | Paint The Town Red | 2023 | Rap/Hip Hop
+Bad Bunny | Tití Me Preguntó | 2022 | Latina
+Billie Eilish | What Was I Made For? | 2023 | Pop
+Billie Eilish | BIRDS OF A FEATHER | 2024 | Pop
+Sabrina Carpenter | Espresso | 2024 | Pop
+Chappell Roan | Good Luck, Babe! | 2024 | Pop
+Lady Gaga | Die With A Smile | 2024 | Pop
+ROSÉ | APT. | 2024 | Pop
+Benson Boone | Beautiful Things | 2024 | Pop
+Taylor Swift | Anti-Hero | 2022 | Pop
+SZA | Kill Bill | 2022 | R&B
+Lil Nas X | MONTERO (Call Me By Your Name) | 2021 | Rap/Hip Hop
+Kendrick Lamar | Not Like Us | 2024 | Rap/Hip Hop
+Tate McRae | greedy | 2023 | Pop
+Teddy Swims | Lose Control | 2023 | Pop
+Hozier | Too Sweet | 2024 | Alternative
+
+# Mazzo: Musica italiana
+Domenico Modugno | Nel blu dipinto di blu | 1958 | Pop
+Gianni Morandi | In ginocchio da te | 1964 | Pop
+Rita Pavone | Viva la pappa col pomodoro | 1965 | Pop
+Adriano Celentano | Il ragazzo della via Gluck | 1966 | Pop
+Adriano Celentano | Azzurro | 1968 | Pop
+Mina | Se telefonando | 1966 | Pop
+Mina | Grande grande grande | 1972 | Pop
+Fabrizio De André | Bocca di rosa | 1967 | Pop
+Lucio Battisti | Emozioni | 1970 | Pop
+Lucio Battisti | La canzone del sole | 1971 | Pop
+Lucio Battisti | Il mio canto libero | 1972 | Pop
+Lucio Dalla | Piazza Grande | 1972 | Pop
+Lucio Dalla | Caruso | 1986 | Pop
+Claudio Baglioni | Questo piccolo grande amore | 1972 | Pop
+Pooh | Pensiero | 1971 | Pop
+Pooh | Uomini soli | 1990 | Pop
+Rino Gaetano | Ma il cielo è sempre più blu | 1975 | Pop
+Rino Gaetano | Gianna | 1978 | Pop
+Raffaella Carrà | A far l'amore comincia tu | 1976 | Dance
+Raffaella Carrà | Tanti auguri | 1978 | Pop
+Umberto Tozzi | Ti amo | 1977 | Pop
+Umberto Tozzi | Gloria | 1979 | Pop
+Pino Daniele | Napule è | 1977 | Pop
+Pino Daniele | Quando | 1991 | Pop
+Edoardo Bennato | Il gatto e la volpe | 1977 | Rock
+Francesco De Gregori | Generale | 1978 | Pop
+Francesco De Gregori | La donna cannone | 1983 | Pop
+Vasco Rossi | Albachiara | 1979 | Rock
+Vasco Rossi | Vita spericolata | 1983 | Rock
+Vasco Rossi | Sally | 1996 | Rock
+Vasco Rossi | Un senso | 2004 | Rock
+Franco Battiato | Centro di gravità permanente | 1981 | Pop
+Franco Battiato | La cura | 1996 | Pop
+Ricchi e Poveri | Sarà perché ti amo | 1981 | Pop
+Al Bano & Romina Power | Felicità | 1982 | Pop
+Loredana Bertè | Non sono una signora | 1982 | Rock
+Toto Cutugno | L'italiano | 1983 | Pop
+Righeira | Vamos a la playa | 1983 | Dance
+Antonello Venditti | Notte prima degli esami | 1984 | Pop
+Eros Ramazzotti | Terra promessa | 1984 | Pop
+Eros Ramazzotti | Più bella cosa | 1996 | Pop
+Spagna | Easy Lady | 1986 | Dance
+Gianna Nannini | Bello e impossibile | 1986 | Rock
+Gianna Nannini | Meravigliosa creatura | 2004 | Rock
+Fiorella Mannoia | Quello che le donne non dicono | 1987 | Pop
+Zucchero | Diamante | 1989 | Rock
+Zucchero | Senza una donna | 1987 | Rock
+Ligabue | Balliamo sul mondo | 1990 | Rock
+Ligabue | Certe notti | 1995 | Rock
+883 | Hanno ucciso l'Uomo Ragno | 1992 | Pop
+883 | Come mai | 1993 | Pop
+883 | Nord sud ovest est | 1993 | Pop
+Jovanotti | Ragazzo fortunato | 1992 | Pop
+Jovanotti | L'ombelico del mondo | 1995 | Pop
+Jovanotti | A te | 2008 | Pop
+Laura Pausini | La solitudine | 1993 | Pop
+Laura Pausini | Strani amori | 1994 | Pop
+Renato Zero | I migliori anni della nostra vita | 1995 | Pop
+Articolo 31 | Tranqi Funky | 1996 | Rap/Hip Hop
+Neffa | Aspettando il sole | 1996 | Rap/Hip Hop
+Nek | Laura non c'è | 1997 | Pop
+Eiffel 65 | Blue (Da Ba Dee) | 1998 | Dance
+Gigi D'Agostino | L'Amour Toujours | 1999 | Dance
+Lùnapop | 50 Special | 1999 | Pop
+Paola & Chiara | Vamos a bailar (Esta vida nueva) | 2000 | Dance
+Subsonica | Tutti i miei sbagli | 2000 | Rock
+Elisa | Luce (tramonti a nord est) | 2001 | Pop
+Giorgia | Di sole e d'azzurro | 2001 | Pop
+Tiziano Ferro | Xdono | 2001 | Pop
+Tiziano Ferro | Sere nere | 2003 | Pop
+Daniele Silvestri | Salirò | 2002 | Pop
+Caparezza | Fuori dal tunnel | 2003 | Rap/Hip Hop
+Cesare Cremonini | Marmellata #25 | 2005 | Pop
+Negramaro | Estate | 2005 | Rock
+Fabri Fibra | Applausi per Fibra | 2006 | Rap/Hip Hop
+Modà | Come un pittore | 2011 | Pop
+Marco Mengoni | L'essenziale | 2013 | Pop
+Fedez | Magnifico | 2014 | Pop
+Baby K | Roma - Bangkok | 2015 | Pop
+J-Ax | Vorrei ma non posto | 2016 | Pop
+Ghali | Ninna nanna | 2016 | Rap/Hip Hop
+Francesco Gabbani | Occidentali's Karma | 2017 | Pop
+Måneskin | Beggin' | 2017 | Rock
+Coez | La musica non c'è | 2017 | Pop
+Thegiornalisti | Riccione | 2017 | Pop
+Sfera Ebbasta | Tran Tran | 2017 | Rap/Hip Hop
+Ghali | Cara Italia | 2018 | Rap/Hip Hop
+Calcutta | Paracetamolo | 2018 | Pop
+Ultimo | Pianeti | 2018 | Pop
+Salmo | 90MIN | 2018 | Rap/Hip Hop
+Mahmood | Soldi | 2019 | Pop
+Achille Lauro | Rolls Royce | 2019 | Rock
+Elodie | Andromeda | 2020 | Pop
+Måneskin | Zitti e buoni | 2021 | Rock
+Blanco | Notti in bianco | 2021 | Pop
+Colapesce | Musica leggerissima | 2021 | Pop
+Mahmood | Brividi | 2022 | Pop
+Marco Mengoni | Due vite | 2023 | Pop
+Annalisa | Mon Amour | 2023 | Pop
+Lazza | Cenere | 2023 | Rap/Hip Hop
+Tananai | Tango | 2023 | Pop
+Angelina Mango | La noia | 2024 | Pop
+Geolier | I p' me, tu p' te | 2024 | Rap/Hip Hop
+Mahmood | Tuta gold | 2024 | Pop
+Olly | Balorda nostalgia | 2025 | Pop
+
+# Mazzo: Film e Disney
+Samuel E. Wright | Under the Sea | 1989 | Colonne sonore
+Peabo Bryson | A Whole New World | 1992 | Colonne sonore
+Elton John | Can You Feel the Love Tonight | 1994 | Colonne sonore
+Nathan Lane | Hakuna Matata | 1994 | Colonne sonore
+Randy Newman | You've Got a Friend in Me | 1995 | Colonne sonore
+Phil Collins | You'll Be in My Heart | 1999 | Colonne sonore
+Idina Menzel | Let It Go | 2013 | Colonne sonore
+Irene Cara | Flashdance... What a Feeling | 1983 | Colonne sonore
+Ray Parker Jr. | Ghostbusters | 1984 | Colonne sonore
+Simple Minds | Don't You (Forget About Me) | 1985 | Colonne sonore
+Huey Lewis & The News | The Power of Love | 1985 | Colonne sonore
+Kenny Loggins | Danger Zone | 1986 | Colonne sonore
+Bill Medley | (I've Had) The Time of My Life | 1987 | Colonne sonore
+Survivor | Eye of the Tiger | 1982 | Colonne sonore
+Smash Mouth | All Star | 1999 | Colonne sonore
+Celine Dion | My Heart Will Go On | 1997 | Colonne sonore
+Hans Zimmer | Time | 2010 | Colonne sonore
+Adele | Skyfall | 2012 | Colonne sonore
+Justin Timberlake | CAN'T STOP THE FEELING! | 2016 | Colonne sonore
+Lady Gaga | Shallow | 2018 | Colonne sonore
+Billie Eilish | No Time To Die | 2020 | Colonne sonore
