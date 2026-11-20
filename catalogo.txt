@@ -330,7 +330,7 @@ Elodie | Andromeda | 2020 | Pop
 Måneskin | Zitti e buoni | 2021 | Rock
 Blanco | Notti in bianco | 2021 | Pop
 Colapesce | Musica leggerissima | 2021 | Pop
-Mahmood | Brividi | 2022 | Pop
+Mahmood / BLANCO | Brividi | 2022 | Pop
 Marco Mengoni | Due vite | 2023 | Pop
 Annalisa | Mon Amour | 2023 | Pop
 Lazza | Cenere | 2023 | Rap/Hip Hop
@@ -362,3 +362,54 @@ Adele | Skyfall | 2012 | Colonne sonore
 Justin Timberlake | CAN'T STOP THE FEELING! | 2016 | Colonne sonore
 Lady Gaga | Shallow | 2018 | Colonne sonore
 Billie Eilish | No Time To Die | 2020 | Colonne sonore
+
+# Mazzo: Sigle cartoni e anime
+# Anno vuoto = lo calcola lo script. "A / B" = nomi alternativi (es. titolo giapponese).
+Cristina D'Avena | Kiss Me Licia | 1985 | Sigle cartoni
+Cristina D'Avena | Occhi di gatto | 1985 | Sigle cartoni
+Cristina D'Avena | Mila e Shiro due cuori nella pallavolo | 1986 | Sigle cartoni
+Cristina D'Avena | Pollon, Pollon combinaguai | 1983 | Sigle cartoni
+Cristina D'Avena | Magica, magica Emi | 1986 | Sigle cartoni
+Cristina D'Avena | Sailor Moon | 1995 | Sigle cartoni
+Cristina D'Avena | Nanà Supergirl | 1984 | Sigle cartoni
+Cristina D'Avena | I Puffi sanno | 1985 | Sigle cartoni
+Cristina D'Avena | Doraemon | | Sigle cartoni
+Cristina D'Avena | Rossana | 1998 | Sigle cartoni
+Cristina D'Avena | Memole dolce Memole | 1985 | Sigle cartoni
+Cristina D'Avena | Lovely Sara | 1985 | Sigle cartoni
+Cristina D'Avena | Georgie | | Sigle cartoni
+Cristina D'Avena | Il mistero della pietra azzurra | | Sigle cartoni
+Cristina D'Avena | Piccoli problemi di cuore | | Sigle cartoni
+Cristina D'Avena | Hamtaro | | Sigle cartoni
+Giorgio Vanni | Pokémon | | Sigle cartoni
+Giorgio Vanni | Dragon Ball GT | 2001 | Sigle cartoni
+Giorgio Vanni | Detective Conan | 2001 | Sigle cartoni
+Giorgio Vanni | All'arrembaggio! | 2001 | Sigle cartoni
+Giorgio Vanni | Digimon | 2001 | Sigle cartoni
+Giorgio Vanni | Yu-Gi-Oh! | 2003 | Sigle cartoni
+Giorgio Vanni | Beyblade | | Sigle cartoni
+I Cavalieri del Re | Lady Oscar | 1982 | Sigle cartoni
+La Banda dei Bucanieri | Capitan Harlock | 1979 | Sigle cartoni
+Actarus | Atlas Ufo Robot / Ufo Robot | 1978 | Sigle cartoni
+Elisabetta Viviani | Heidi | 1978 | Sigle cartoni
+Yoko Takahashi / 高橋洋子 | A Cruel Angel's Thesis / 残酷な天使のテーゼ | 1995 | Sigle cartoni
+Seatbelts / シートベルツ | Tank! | 1998 | Sigle cartoni
+TK from Ling tosite sigure / TK from 凛として時雨 | unravel | 2014 | Sigle cartoni
+Linked Horizon | Guren no Yumiya / 紅蓮の弓矢 | 2013 | Sigle cartoni
+LiSA | Gurenge / 紅蓮華 | 2019 | Sigle cartoni
+Ikimonogakari / いきものがかり | Blue Bird / ブルーバード | 2008 | Sigle cartoni
+Hiroshi Kitadani / きただにひろし | We Are! / ウィーアー! | 1999 | Sigle cartoni
+Nightmare / ナイトメア | the WORLD | 2006 | Sigle cartoni
+YUI | again | 2009 | Sigle cartoni
+KANA-BOON | Silhouette / シルエット | 2014 | Sigle cartoni
+Eve | Kaikai Kitan / 廻廻奇譚 | 2020 | Sigle cartoni
+YOASOBI | Idol / アイドル | 2023 | Sigle cartoni
+Kenshi Yonezu / 米津玄師 | Peace Sign | 2017 | Sigle cartoni
+Kenshi Yonezu / 米津玄師 | KICK BACK | 2022 | Sigle cartoni
+nobodyknows+ | Hero's Come Back!! | 2007 | Sigle cartoni
+King Gnu | SPECIALZ | 2023 | Sigle cartoni
+Creepy Nuts | Bling-Bang-Bang-Born | 2024 | Sigle cartoni
+Creepy Nuts | Otonoke / オトノケ | 2024 | Sigle cartoni
+Official HIGE DANdism / Official髭男dism | Mixed Nuts | 2022 | Sigle cartoni
+Tatsuya Kitani / キタニタツヤ | Ao no Sumika / 青のすみか / Where Our Blue Is | 2023 | Sigle cartoni
+Mrs. GREEN APPLE | Inferno / インフェルノ | 2019 | Sigle cartoni

@@ -351,7 +351,7 @@ async function spHandleRedirect() {
   const p = new URLSearchParams(location.search);
   if (!p.has('code') && !p.has('error')) return;
   history.replaceState(null, '', SP_REDIRECT);
-  go('decks');
+  go('settings', { tab: 'decks' });
   $('.tab[data-tab="spotify"]').click();
   if (p.get('error')) { status('Accesso Spotify annullato.'); return; }
   if (p.get('state') !== sessionStorage.getItem('spState')) { status('⚠️ Accesso Spotify non valido, riprova.'); return; }
@@ -446,7 +446,12 @@ const player = {
       gain.gain.linearRampToValueAtTime(0, t + dur);
       const src = ctx.createBufferSource();
       src.buffer = this.buffer;
-      src.connect(gain).connect(ctx.destination);
+      if (!this.analyser) { // per il visualizzatore attorno al pulsante play
+        this.analyser = ctx.createAnalyser();
+        this.analyser.fftSize = 128;
+        this.analyser.connect(ctx.destination);
+      }
+      src.connect(gain).connect(this.analyser);
       src.start(t, offset, dur);
       src.onended = () => { if (this.node === src) { this.node = null; onEnd?.(); } };
       this.node = src;
@@ -471,7 +476,8 @@ function activePool() {
 
 /* ============ Filtri ============ */
 const WORLD_HIT = 800000; // "rank" Deezer: Bohemian Rhapsody ~960k, Levitating ~900k
-let filters = { decades: [], genres: [], artists: [], pop: 'all', ...(store('filters') || {}) };
+const MIN_DECADE_CHIP = 1990; // le epoche prima degli anni 90 non compaiono come categoria
+let filters = { decks: [], decades: [], genres: [], artists: [], pop: 'all', ...(store('filters') || {}) };
 const saveFilters = () => { store('filters', filters); renderFilters(); };
 const decadeOf = (y) => (y ? Math.floor(y / 10) * 10 : null);
 const decadeLabel = (d) => (d < 2000 ? `Anni ${String(d).slice(2)}` : `Anni ${d}`);
@@ -488,8 +494,17 @@ function topPerArtist(pool) {
   return top;
 }
 
+// base della partita: i mazzi scelti dalla categoria, altrimenti quelli spuntati
+function basePool() {
+  const names = filters.decks.filter((n) => decks[n]);
+  if (!names.length) return activePool();
+  const seen = new Set(); const pool = [];
+  for (const n of names) for (const s of decks[n]) if (!seen.has(s.id)) { seen.add(s.id); pool.push(s); }
+  return pool;
+}
+
 function filteredPool() {
-  const pool = activePool();
+  const pool = basePool();
   const top = ['top', 'deep'].includes(filters.pop) ? topPerArtist(pool) : null;
   return pool.filter((s) => {
     if (filters.decades.length && !filters.decades.includes(decadeOf(s.year))) return false;
@@ -508,11 +523,30 @@ function countBy(pool, keysOf) {
   return m;
 }
 
+const CATEGORIES = [
+  { id: 'tutto', icon: '🎲', name: 'Tutto', desc: 'Dai mazzi spuntati', f: {} },
+  { id: 'storiche', icon: '🏆', name: 'Hit storiche', desc: 'Successi mondiali fino al 1999', f: { decades: [1950, 1960, 1970, 1980, 1990], pop: 'world' } },
+  { id: 'recenti', icon: '🔥', name: 'Successi recenti', desc: 'Dal 2010 a oggi', f: { decades: [2010, 2020], pop: 'top' } },
+  { id: 'italiane', icon: '🇮🇹', name: 'Italiane', desc: 'Da Modugno a Olly', f: { decks: ['Musica italiana'] } },
+  { id: 'internazionali', icon: '🌍', name: 'Internazionali', desc: 'Dagli anni 60 al 2025', f: { decks: ['Hit internazionali'] } },
+  { id: 'sigle', icon: '📺', name: 'Sigle cartoni', desc: 'Cartoni italiani e anime', f: { decks: ['Sigle cartoni e anime'] } },
+  { id: 'film', icon: '🎬', name: 'Film e Disney', desc: 'Colonne sonore', f: { decks: ['Film e Disney'] } },
+  { id: 'chicche', icon: '💎', name: 'Chicche', desc: 'Le meno famose', f: { pop: 'deep' } },
+];
+const catFilters = (c) => ({ decks: [], decades: [], genres: [], artists: [], pop: 'all', ...structuredClone(c.f) });
+const sameFilters = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 function renderFilters() {
-  const pool = activePool();
+  const pool = basePool();
+  $('#f-categories').innerHTML = CATEGORIES.map((c) => {
+    const on = sameFilters(filters, catFilters(c));
+    const missing = c.f.decks && !c.f.decks.some((n) => decks[n]);
+    return `<button class="cat ${on ? 'on' : ''}" data-cat="${c.id}" ${missing ? 'disabled title="Mazzo non presente"' : ''}>
+      <span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span><span class="cat-desc">${c.desc}</span></button>`;
+  }).join('');
+
   const decs = countBy(pool, (s) => [decadeOf(s.year)]);
-  for (const d of filters.decades) if (!decs.has(d)) decs.set(d, 0);
-  $('#f-decades').innerHTML = [...decs.keys()].sort((a, b) => a - b).map((d) =>
+  $('#f-decades').innerHTML = [...decs.keys()].filter((d) => d >= MIN_DECADE_CHIP).sort((a, b) => a - b).map((d) =>
     `<span class="chip toggle ${filters.decades.includes(d) ? 'on' : ''}" data-decade="${d}">${decadeLabel(d)} <small>${decs.get(d)}</small></span>`).join('')
     || '<span class="muted small">Appariranno quando le canzoni saranno catalogate.</span>';
 
@@ -529,10 +563,14 @@ function renderFilters() {
 
   const n = filteredPool().length;
   const pending = pool.filter((s) => !s.meta).length;
-  $('#filter-count').textContent = `🎧 ${n} canzoni pronte per la partita` + (pending ? ` (${pending} ancora da catalogare)` : '');
+  $('#filter-count').textContent = `${n} canzoni pronte` + (pending ? ` · ${pending} ancora da catalogare` : '');
   renderSummary();
 }
 
+$('#f-categories').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cat]'); if (!b || b.disabled) return;
+  filters = catFilters(CATEGORIES.find((c) => c.id === b.dataset.cat)); saveFilters();
+});
 $('#f-decades').addEventListener('click', (e) => {
   const c = e.target.closest('[data-decade]'); if (!c) return;
   const d = +c.dataset.decade;
@@ -557,16 +595,6 @@ $('#f-artists').addEventListener('click', (e) => {
 });
 $('#f-pop').addEventListener('change', (e) => { filters.pop = e.target.value; saveFilters(); });
 
-const PRESETS = {
-  storiche: { decades: [1950, 1960, 1970, 1980, 1990], genres: [], artists: [], pop: 'world' },
-  recenti: { decades: [2010, 2020], genres: [], artists: [], pop: 'top' },
-  classici: { decades: [1950, 1960, 1970, 1980, 1990], genres: [], artists: [], pop: 'all' },
-  chicche: { decades: [], genres: [], artists: [], pop: 'deep' },
-  tutto: { decades: [], genres: [], artists: [], pop: 'all' },
-};
-$$('[data-preset]').forEach((b) => b.addEventListener('click', () => {
-  filters = structuredClone(PRESETS[b.dataset.preset]); saveFilters();
-}));
 
 /* ============ Esporta / importa mazzi ============ */
 $('#deck-export').addEventListener('click', () => {
@@ -594,10 +622,17 @@ $('#deck-import-file').addEventListener('change', async (e) => {
 });
 
 /* ============ Mazzi di base (starter.js, generato da catalogo.txt) ============ */
+// aggiunge le canzoni mancanti dei mazzi di base e aggiorna anno/genere di quelle già presenti
 function loadStarter() {
   let total = 0;
-  for (const [name, songs] of Object.entries(window.STARTER_DECKS || {})) total += addToDeck(name, songs.map((s) => ({ ...s })));
+  for (const [name, songs] of Object.entries(window.STARTER_DECKS || {})) {
+    const byId = new Map((decks[name] || []).map((s) => [String(s.id), s]));
+    for (const s of songs) { const old = byId.get(String(s.id)); if (old) Object.assign(old, { year: s.year, genres: s.genres, yearManual: true, meta: 1 }); }
+    total += addToDeck(name, songs.map((s) => ({ ...s })));
+  }
+  saveDecks();
   store('starterLoaded', true);
+  store('starterVersion', window.STARTER_VERSION || 1);
   return total;
 }
 $('#deck-starter').addEventListener('click', () => {

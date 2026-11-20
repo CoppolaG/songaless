@@ -12,7 +12,8 @@ Quiz musicale: ascolti un frammento di 0,1 secondi e provi a indovinare la canzo
 |---|---|
 | `index.html`, `style.css` | pagina e grafica |
 | `app.js` | mazzi, import (Deezer/Spotify/artisti/lista), catalogazione, filtri |
-| `game.js` | partita locale e stanze online |
+| `game.js` | partita locale, stanze online, canzoni segnate |
+| `fx.js` | animazioni (GSAP, Lenis, coriandoli, visualizzatore) |
 | `catalogo.txt` | elenco dei mazzi di base (Artista \| Titolo \| Anno \| Genere) |
 | `build-starter.mjs` | rigenera `starter.js` da `catalogo.txt`: `node build-starter.mjs` |
 
