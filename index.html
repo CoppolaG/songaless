@@ -44,6 +44,11 @@
         <span class="qt-body"><span class="qt-title">Canzoni segnate</span><span id="qt-saved" class="qt-sub"></span></span>
         <span class="qt-arrow">→</span>
       </button>
+      <button class="qtile spot" data-go="stats">
+        <span class="qt-ico">📊</span>
+        <span class="qt-body"><span class="qt-title">Statistiche</span><span id="qt-stats" class="qt-sub"></span></span>
+        <span class="qt-arrow">→</span>
+      </button>
     </div>
 
     <div class="hero">
@@ -309,11 +314,15 @@
 
       <div id="g-steps" class="timebar"></div>
 
-      <div class="play-wrap">
-        <canvas id="g-viz" width="320" height="320" aria-hidden="true"></canvas>
-        <button id="g-play" class="play" aria-label="Ascolta">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
+      <div class="arena">
+        <div class="avatar-slot"><div id="g-avatar"></div><span id="g-streak" class="streak hidden"></span></div>
+        <div class="play-wrap">
+          <canvas id="g-viz" width="320" height="320" aria-hidden="true"></canvas>
+          <button id="g-play" class="play" aria-label="Ascolta">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+        <div class="avatar-slot ghost" aria-hidden="true"></div>
       </div>
       <p id="g-play-label" class="play-label"></p>
 
@@ -339,15 +348,32 @@
 
   <!-- FINE -->
   <section id="screen-end" class="screen hidden">
-    <div class="panel narrow center">
+    <div class="end-wrap center">
       <p class="eyebrow">fine partita</p>
       <h2 id="end-winner"></h2>
+      <div id="podium" class="podium"></div>
       <ol id="end-scores" class="scores big"></ol>
-      <h4 class="f-title">Canzoni uscite</h4>
-      <ul id="end-history" class="history"></ul>
-      <button id="end-again" class="btn primary big">Gioca ancora</button>
+      <div class="row center">
+        <button id="end-again" class="btn primary">Gioca ancora</button>
+        <button id="end-image" class="btn">📸 Scarica la classifica</button>
+      </div>
       <p id="end-wait" class="muted small hidden">Aspetta che l'host avvii un'altra partita…</p>
+      <details class="adv end-hist">
+        <summary>Canzoni uscite</summary>
+        <ul id="end-history" class="history"></ul>
+      </details>
     </div>
+  </section>
+
+  <!-- STATISTICHE -->
+  <section id="screen-stats" class="screen hidden">
+    <div class="page-head">
+      <button class="back" data-go="home">← Home</button>
+      <h2>Statistiche</h2>
+    </div>
+    <p class="muted">Salvate su questo dispositivo. Tocca 🎲 per cambiare l'aspetto del personaggio.</p>
+    <div id="stats-list" class="stats-grid"></div>
+    <div class="row"><button id="stats-reset" class="btn ghost">Azzera statistiche</button></div>
   </section>
 </main>
 
@@ -355,6 +381,8 @@
 <div id="reveal" class="reveal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rv-title">
   <div class="reveal-card">
     <div id="rv-result" class="rv-result"></div>
+    <div id="rv-stage" class="rv-stage"></div>
+    <p id="rv-caption" class="rv-caption"></p>
     <div class="rv-disc">
       <img id="rv-cover" alt="">
       <span class="rv-hole"></span>
@@ -379,6 +407,7 @@
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="starter.js"></script>
 <script src="app.js"></script>
+<script src="chars.js"></script>
 <script src="game.js"></script>
 <script src="fx.js"></script>
 </body>

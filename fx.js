@@ -66,14 +66,20 @@
   const viz = document.getElementById('g-viz');
   const vctx = viz.getContext('2d');
   const bins = new Uint8Array(64);
-  let idle = 0;
+  let idle = 0; let energy = 0;
+  const root = document.documentElement;
   function drawViz() {
     requestAnimationFrame(drawViz);
+    const playing = !!player.node;
+    if (playing && player.analyser) player.analyser.getByteFrequencyData(bins); else bins.fill(0);
+    // sfondo che reagisce alla musica: energia dei bassi, salita rapida e discesa morbida
+    let sum = 0; for (let i = 0; i < 12; i++) sum += bins[i];
+    const e = Math.min(1, (sum / 12 / 255) ** 1.6 * 1.4);
+    energy = e > energy ? energy + (e - energy) * 0.5 : energy * 0.92;
+    root.style.setProperty('--energy', energy.toFixed(3));
     if (document.getElementById('screen-game').classList.contains('hidden')) return;
     const W = viz.width; const H = viz.height; const cx = W / 2; const cy = H / 2;
     vctx.clearRect(0, 0, W, H);
-    const playing = !!player.node;
-    if (playing && player.analyser) player.analyser.getByteFrequencyData(bins); else bins.fill(0);
     idle += 0.02;
     const n = 56; const r0 = W * 0.27;
     for (let i = 0; i < n; i++) {
@@ -121,6 +127,16 @@
     conf({ particleCount: 18, spread: 70, startVelocity: 22, ticks: 90, scalar: star ? 1.4 : 0.8, shapes: star ? [star] : ['star'],
       colors: ['#ffd426'], origin: { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight }, disableForReducedMotion: true });
   };
+  let flame = null;
+  try { flame = conf?.shapeFromText({ text: '🔥', scalar: 2.4 }); } catch { /* niente emoji */ }
+  fx.fire = () => {
+    if (!conf || reduce) return;
+    [0.2, 0.5, 0.8].forEach((x, i) => setTimeout(() => conf({
+      particleCount: 14, spread: 50, startVelocity: 42, gravity: 0.7, ticks: 160, origin: { x, y: 1 }, angle: 90,
+      shapes: flame ? [flame] : ['circle'], colors: ['#ff8a3d', '#e5484d'], scalar: flame ? 2.2 : 1, flat: true, disableForReducedMotion: true,
+    }), i * 120));
+  };
+  fx.podium = () => {};
   fx.celebrate = () => {
     if (!conf || reduce) return;
     const end = performance.now() + 1800;
@@ -141,7 +157,7 @@
   gsap.defaults({ ease: 'power3.out', duration: 0.6 });
   if (typeof SplitText !== 'undefined') gsap.registerPlugin(SplitText);
 
-  const ENTER = '.page-head, .seg-tabs, .quickbar > *, .hero .eyebrow, .hero-sub, .mode, .panel, .sticky-start, .saved-card, .empty, .game-head, .status-row, .timebar, .play-wrap, .play-label, #g-guess-area, .attempts, .scores-panel, #join-wait > *';
+  const ENTER = '.page-head, .seg-tabs, .quickbar > *, .hero .eyebrow, .hero-sub, .mode, .panel, .sticky-start, .saved-card, .empty, .game-head, .status-row, .timebar, .arena, .stat-card, .play-label, #g-guess-area, .attempts, .scores-panel, #join-wait > *';
   fx.screenIn = (el) => {
     if (!el) return;
     const items = [...el.querySelectorAll(ENTER)].filter((x) => x.offsetParent !== null);
@@ -179,7 +195,7 @@
   fx.countScores = (list) => {
     list.querySelectorAll('li').forEach((li) => {
       const span = li.querySelector('span[data-score]');
-      const name = li.firstChild?.textContent || '';
+      const name = li.dataset.name || '';
       const to = +span.dataset.score; const from = lastScore.get(name) ?? to;
       lastScore.set(name, to);
       if (from === to) return;
@@ -200,6 +216,18 @@
   });
   wrap.addEventListener('pointerleave', () => { mx(0); my(0); });
 
+  // podio: i gradini salgono, i personaggi cadono sopra, poi coriandoli
+  fx.podium = () => {
+    const tl = gsap.timeline();
+    tl.fromTo('#end-winner', { y: 30, autoAlpha: 0, scale: 0.9 }, { y: 0, autoAlpha: 1, scale: 1, duration: 0.6, ease: 'back.out(2)' })
+      .fromTo('#podium .pod:not(.empty) .step', { scaleY: 0, transformOrigin: '50% 100%' },
+        { scaleY: 1, duration: 0.7, stagger: { each: 0.18, from: 'end' }, ease: 'power3.out', clearProps: 'transform' }, '-=0.2')
+      .fromTo('#podium .pod:not(.empty) .char', { y: -220, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.15, ease: 'bounce.out' }, '-=0.3')
+      .fromTo(['#podium .who', '#podium .pts', '#podium .crown'], { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.04, duration: 0.4 }, '-=0.4')
+      .call(() => fx.celebrate());
+  };
+
   // rivelazione della canzone
   fx.revealIn = (ok) => {
     const tl = gsap.timeline();
@@ -208,7 +236,7 @@
         { y: 0, scale: 1, rotationX: 0, duration: 0.8, ease: 'back.out(1.4)' }, '<')
       .fromTo('.rv-result', { y: -16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4 }, '-=0.55')
       .fromTo('.rv-disc', { scale: 0.5, rotation: -120 }, { scale: 1, rotation: 0, duration: 1, ease: 'expo.out', clearProps: 'transform' }, '<')
-      .fromTo(['.rv-title', '.rv-artist', '.rv-progress', '#rv-results', '.rv-actions'], { y: 18, autoAlpha: 0 },
+      .fromTo(['.rv-stage', '.rv-title', '.rv-artist', '.rv-progress', '#rv-results', '.rv-actions'], { y: 18, autoAlpha: 0 },
         { y: 0, autoAlpha: 1, stagger: 0.07, duration: 0.5 }, '-=0.7');
     setTimeout(() => (ok ? fx.confetti() : fx.poop()), 250);
   };

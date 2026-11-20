@@ -34,6 +34,7 @@ function go(name, opts = {}) {
   if (name === 'home') renderHome();
   if (name === 'settings') setSettingsTab(opts.tab || 'rules');
   if (name === 'saved') renderSaved();
+  if (name === 'stats') renderStats();
   window.lenis ? window.lenis.scrollTo(0, { immediate: true }) : window.scrollTo(0, 0);
   FX('screenIn', el);
 }
@@ -58,6 +59,8 @@ function renderHome() {
   $('#qt-decks').textContent = `${n} mazz${n === 1 ? 'o' : 'i'} · ${activePool().length} canzoni`;
   const s = saved.length;
   $('#qt-saved').textContent = s ? `${s} canzon${s === 1 ? 'e' : 'i'}` : 'Ancora nessuna';
+  const g = Object.values(stats).reduce((n, x) => n + x.songs, 0);
+  $('#qt-stats').textContent = g ? `${g} canzoni giocate` : 'Gioca per vederle';
 }
 
 /* ============ Impostazioni: regole ============ */
@@ -234,13 +237,17 @@ function setFeedback(msg, cls = '') {
   const f = $('#g-feedback'); f.textContent = msg; f.className = 'feedback ' + cls;
 }
 
-async function startRoundUI({ label, turn, steps, offset, preview, time }) {
+async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time }) {
   clearInterval(roundTimer);
   hideReveal(true);
-  R = { steps, step: 0, offset, done: false, attempts: [] };
+  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who };
   if (currentScreen() !== 'game') go('game');
   $('#g-round').textContent = label;
   $('#g-turn').textContent = turn || '';
+  $('#g-avatar').innerHTML = who ? Chars.svg(Chars.lookFor(who), { size: 110 }) : '';
+  $('#g-streak').textContent = `🔥 ${streak}`;
+  $('#g-streak').classList.toggle('hidden', streak < 2);
+  FX('pop', $('#g-avatar'));
   $('#g-guess-area').classList.remove('hidden');
   $('#g-guess').value = ''; hideSuggest();
   $('#g-play').disabled = true;
@@ -281,6 +288,7 @@ function handleVerdict(v) {
   if (!R || R.done) return;
   const label = v.kind === 'guess' ? v.title : v.kind === 'skip' ? 'Saltato' : 'Mi arrendo';
   R.attempts[R.step] = { type: v.ok ? 'right' : v.kind === 'guess' ? 'wrong' : 'skip', text: label };
+  if (!v.ok && v.kind !== 'giveup') { R.hits++; Chars.damage($('#g-avatar .char'), R.hits); } // perde un pezzo
   if (v.ok) {
     R.done = true;
     setFeedback(`✓ Indovinata in ${R.steps[R.step]} s! +${v.pts}`, 'ok');
@@ -317,18 +325,101 @@ function guess(pick) {
 
 function renderScores(list, el = $('#g-scores')) {
   el.innerHTML = [...list].sort((a, b) => b.score - a.score)
-    .map((p) => `<li>${esc(p.name)}<span data-score="${p.score}">${p.score}</span></li>`).join('');
+    .map((p) => `<li data-name="${esc(p.name)}"><span class="mini-av">${Chars.svg(p.look ? Chars.clean(p.look, p.name) : Chars.lookFor(p.name), { size: 22 })}</span>${esc(p.name)}${p.streak >= 2 ? `<em class="fire">🔥${p.streak}</em>` : ''}<span data-score="${p.score}">${p.score}</span></li>`).join('');
   FX('countScores', el);
 }
 
+/* ============ Statistiche personali ============ */
+const CAT_NAMES = Object.fromEntries(CATEGORIES.map((c) => [c.id, `${c.icon} ${c.name}`]));
+const catIdNow = () => CATEGORIES.find((c) => sameFilters(filters, catFilters(c)))?.id || 'custom';
+let stats = store('stats') || {};
+const statOf = (name) => {
+  const k = String(name).toLowerCase();
+  return (stats[k] = stats[k] || { name, games: 0, wins: 0, songs: 0, correct: 0, sumT: 0, fastest: null, bestStreak: 0, cats: {}, deaths: {} });
+};
+const saveStats = () => store('stats', stats);
+function recordRound(name, { ok, t, song, cat, streak }) {
+  const s = statOf(name);
+  s.songs++;
+  const c = (s.cats[cat] = s.cats[cat] || { songs: 0, correct: 0 });
+  c.songs++;
+  if (ok) {
+    s.correct++; c.correct++; s.sumT += t;
+    if (!s.fastest || t < s.fastest.t) s.fastest = { t, title: song.title, artist: song.artist };
+  }
+  s.bestStreak = Math.max(s.bestStreak, streak || 0);
+  saveStats();
+}
+function recordDeath(name, type) { const s = statOf(name); s.deaths[type] = (s.deaths[type] || 0) + 1; saveStats(); }
+function recordGame(name, won) { const s = statOf(name); s.games++; if (won) s.wins++; saveStats(); }
+
+function renderStats() {
+  const names = [...new Set([...roster.map((n) => n.toLowerCase()), ...Object.keys(stats)])];
+  $('#stats-list').innerHTML = names.map((k) => {
+    const s = stats[k] || { name: roster.find((n) => n.toLowerCase() === k) || k, games: 0, wins: 0, songs: 0, correct: 0, sumT: 0, fastest: null, bestStreak: 0, cats: {}, deaths: {} };
+    const acc = s.songs ? Math.round((s.correct / s.songs) * 100) : 0;
+    const avg = s.correct ? (s.sumT / s.correct).toFixed(1) : '–';
+    const best = Object.entries(s.cats).filter(([, c]) => c.songs >= 3).sort((a, b) => b[1].correct / b[1].songs - a[1].correct / a[1].songs)[0];
+    const deaths = Object.values(s.deaths).reduce((a, b) => a + b, 0);
+    const favDeath = Object.entries(s.deaths).sort((a, b) => b[1] - a[1])[0];
+    return `<div class="stat-card spot">
+      <div class="stat-head">${Chars.svg(Chars.lookFor(s.name), { size: 56 })}<div><h3>${esc(s.name)}</h3><span class="muted small">${s.games} partite · ${s.wins} vinte</span></div>
+        <button class="reroll" data-reroll="${esc(s.name)}" title="Cambia aspetto">🎲</button></div>
+      <div class="stat-nums">
+        <div><b>${acc}%</b><span>indovinate</span></div>
+        <div><b>${avg}${s.correct ? 's' : ''}</b><span>tempo medio</span></div>
+        <div><b>🔥${s.bestStreak}</b><span>serie record</span></div>
+      </div>
+      <ul class="stat-more">
+        <li>Canzoni giocate: <b>${s.songs}</b> · indovinate: <b>${s.correct}</b></li>
+        ${s.fastest ? `<li>Più veloce: <b>${esc(s.fastest.title)}</b> in <b>${s.fastest.t}s</b></li>` : ''}
+        ${best ? `<li>Categoria migliore: <b>${esc(CAT_NAMES[best[0]] || 'Personalizzata')}</b> (${Math.round((best[1].correct / best[1].songs) * 100)}%)</li>` : ''}
+        <li>Morti: <b>💀 ${deaths}</b>${favDeath ? ` · più spesso <b>${esc(favDeath[0])}</b>` : ''}</li>
+      </ul>
+    </div>`;
+  }).join('') || '<div class="empty">Ancora nessuna statistica: gioca una partita!</div>';
+  FX('stagger', $$('#stats-list > *'));
+}
+$('#stats-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-reroll]'); if (!b) return;
+  Chars.setLook(b.dataset.reroll, Chars.randomLook());
+  renderStats();
+});
+$('#stats-reset').addEventListener('click', () => {
+  if (!confirm('Azzerare tutte le statistiche?')) return;
+  stats = {}; saveStats(); renderStats();
+});
+
 /* ============ Rivelazione con animazione ============ */
 let revealSong = null; let revealRaf = null;
-function showReveal(song, { ok, text, results = null, canNext = true, nextLabel = 'Prossima canzone' }) {
+// actors: [{ name, look, ok, hits, record }] → i personaggini sul palco (vivi che ballano, gli altri fatti fuori)
+function showReveal(song, { ok, text, results = null, canNext = true, nextLabel = 'Prossima canzone', actors = [], streak = 0 }) {
   if (R) R.done = true;
   lockRound(); clearInterval(roundTimer); $('#g-timer').classList.add('hidden');
   revealSong = song;
   $('#rv-result').textContent = text;
   $('#rv-result').className = 'rv-result ' + (ok ? 'ok' : 'bad');
+  const size = actors.length > 3 ? 62 : actors.length > 1 ? 78 : 96;
+  $('#rv-stage').innerHTML = actors.map((a, i) => `<div class="actor" data-i="${i}">${Chars.svg(a.look ? Chars.clean(a.look, a.name) : Chars.lookFor(a.name), { size, missing: Math.min(4, a.hits || 0) })}${actors.length > 1 ? `<span>${esc(a.name)}</span>` : ''}</div>`).join('');
+  $('#rv-stage').classList.toggle('hidden', !actors.length);
+  const cap = $('#rv-caption');
+  cap.textContent = streak >= 2 && ok ? `🔥 Serie di ${streak} di fila!` : '';
+  cap.className = 'rv-caption good';
+  setTimeout(() => {
+    const deathsTxt = [];
+    actors.forEach((a, i) => {
+      const s = $(`#rv-stage .actor[data-i="${i}"] .char`);
+      if (a.ok) { Chars.dance(s); return; }
+      const type = Chars.kill(s);
+      if (a.record) recordDeath(a.name, type);
+      deathsTxt.push(`${a.name} ${Chars.DEATH_LABEL[type]}`);
+    });
+    if (deathsTxt.length) {
+      cap.className = 'rv-caption';
+      cap.textContent = actors.length === 1 ? `💀 ${deathsTxt[0]}` : `💀 ${deathsTxt.length === 1 ? deathsTxt[0] : `${deathsTxt.length} vittime`}`;
+    }
+    if (ok && streak >= 3) FX('fire');
+  }, 650);
   $('#rv-cover').src = song.cover || '';
   $('#rv-title').textContent = song.title;
   $('#rv-artist').textContent = `${song.artist}${song.year ? ' · ' + song.year : ''}`;
@@ -440,40 +531,128 @@ $('#saved-clear').addEventListener('click', () => {
   saved = []; store('saved', saved); updateBadge(); renderSaved();
 });
 
+let lastEnd = null;
+const lookOf = (p) => (p.look ? Chars.clean(p.look, p.name) : Chars.lookFor(p.name));
 function showEnd(scores, history, canRestart) {
   player.stop(); clearInterval(roundTimer); hideReveal(true);
   go('end');
   const sorted = [...scores].sort((a, b) => b.score - a.score);
+  lastEnd = { sorted };
   $('#end-winner').textContent = sorted[0] ? `🏆 Vince ${sorted[0].name}!` : 'Fine';
-  renderScores(sorted, $('#end-scores'));
+  // podio: secondo, primo, terzo
+  $('#podium').innerHTML = [1, 0, 2].map((i) => {
+    const p = sorted[i];
+    if (!p) return `<div class="pod p${i + 1} empty"></div>`;
+    return `<div class="pod p${i + 1}">
+      ${i === 0 ? '<span class="crown">👑</span>' : ''}
+      ${Chars.svg(lookOf(p), { size: i === 0 ? 96 : 76 })}
+      <span class="who">${esc(p.name)}</span><span class="pts">${p.score} punti</span>
+      <div class="step">${i + 1}</div></div>`;
+  }).join('');
+  const rest = sorted.slice(3);
+  $('#end-scores').classList.toggle('hidden', !rest.length);
+  renderScores(rest, $('#end-scores'));
+  $('#end-scores').style.counterReset = 'pos 3';
   $('#end-history').innerHTML = history.map((h) => `<li>${esc(h.artist)} – ${esc(h.title)}${h.note ? ` <em>(${esc(h.note)})</em>` : ''}</li>`).join('');
   $('#end-again').classList.toggle('hidden', !canRestart);
   $('#end-wait').classList.toggle('hidden', canRestart);
-  FX('celebrate');
+  FX('podium');
+  // il primo balla, il terzo fa una brutta fine
+  setTimeout(() => {
+    $$('#podium .pod:not(.empty) .char').forEach((c) => {
+      if (c.closest('.p1')) Chars.dance(c);
+      else if (c.closest('.p3')) Chars.kill(c);
+    });
+  }, 1600);
 }
+
+// immagine della classifica da mandare nel gruppo
+function svgImage(look, size) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => res(img); img.onerror = () => res(null);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Chars.svg(look, { size }));
+  });
+}
+const siteLabel = () => (location.host + location.pathname).replace(/\/+$/, '');
+$('#end-image').addEventListener('click', async () => {
+  if (!lastEnd) return;
+  const sorted = lastEnd.sorted;
+  const W = 1080; const H = 1350;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1a1236'); bg.addColorStop(1, '#09090d');
+  x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  [['rgba(124,92,255,.35)', 180, 160, 520], ['rgba(255,77,141,.25)', 920, 1100, 560]].forEach(([col, cx, cy, r]) => {
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, 'transparent');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+  });
+  await document.fonts.ready;
+  x.textAlign = 'center';
+  x.fillStyle = '#ffd426'; x.font = '900 78px Outfit, sans-serif'; x.fillText('Indovina la Canzone', W / 2, 140);
+  x.fillStyle = '#9393a3'; x.font = '500 34px Outfit, sans-serif';
+  x.fillText(new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, 196);
+  const slots = [
+    { i: 1, cx: 260, h: 250, col: ['#e5e7eb', '#9ca3af'] },
+    { i: 0, cx: 540, h: 360, col: ['#ffe066', '#f5b700'] },
+    { i: 2, cx: 820, h: 180, col: ['#f0a46b', '#b45309'] },
+  ];
+  const base = 1040;
+  for (const sl of slots) {
+    const p = sorted[sl.i]; if (!p) continue;
+    const g = x.createLinearGradient(0, base - sl.h, 0, base); g.addColorStop(0, sl.col[0]); g.addColorStop(1, sl.col[1]);
+    x.fillStyle = g; x.beginPath(); x.roundRect(sl.cx - 130, base - sl.h, 260, sl.h, [28, 28, 8, 8]); x.fill();
+    x.fillStyle = 'rgba(0,0,0,.5)'; x.font = '900 96px Outfit, sans-serif'; x.fillText(String(sl.i + 1), sl.cx, base - sl.h + 110);
+    const img = await svgImage(lookOf(p), sl.i === 0 ? 190 : 160);
+    if (img) x.drawImage(img, sl.cx - img.width / 2, base - sl.h - img.height - 110);
+    x.fillStyle = '#f5f5f7'; x.font = '800 46px Outfit, sans-serif';
+    x.fillText(p.name.charAt(0).toUpperCase() + p.name.slice(1), sl.cx, base - sl.h - 62);
+    x.fillStyle = '#ffd426'; x.font = '700 34px Outfit, sans-serif'; x.fillText(`${p.score} punti`, sl.cx, base - sl.h - 20);
+    if (sl.i === 0) { x.font = '80px serif'; x.fillText('👑', sl.cx, base - sl.h - (img ? img.height : 0) - 110); }
+  }
+  x.textAlign = 'left'; x.font = '600 38px Outfit, sans-serif';
+  sorted.slice(3, 7).forEach((p, k) => {
+    x.fillStyle = '#9393a3'; x.fillText(`${k + 4}.`, 220, 1120 + k * 52);
+    x.fillStyle = '#f5f5f7'; x.fillText(p.name, 290, 1120 + k * 52);
+    x.textAlign = 'right'; x.fillText(String(p.score), 860, 1120 + k * 52); x.textAlign = 'left';
+  });
+  x.textAlign = 'center'; x.fillStyle = 'rgba(255,255,255,.45)'; x.font = '500 28px Outfit, sans-serif';
+  x.fillText(siteLabel(), W / 2, H - 40);
+  c.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `classifica-${new Date().toISOString().slice(0, 10)}.png`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }, 'image/png');
+});
 $('#end-again').addEventListener('click', () => go('setup'));
 
 /* ============ Modalità stesso schermo ============ */
 let game = null;
-const localScores = () => Object.entries(game.scores).map(([name, score]) => ({ name, score }));
+const localScores = () => Object.entries(game.scores).map(([name, score]) => ({ name, score, streak: game.streak[name] || 0 }));
 function localStart(o) {
   game = {
-    ...o, total: o.rounds * players.length, round: 0, players: players.slice(),
-    scores: Object.fromEntries(players.map((p) => [p, 0])),
+    ...o, total: o.rounds * players.length, round: 0, players: players.slice(), cat: catIdNow(),
+    scores: Object.fromEntries(players.map((p) => [p, 0])), streak: {},
     pool: filteredPool(), queue: [], history: [],
   };
   game.queue = shuffle(game.pool);
   localNextRound();
 }
 async function localNextRound() {
-  if (game.round >= game.total) { showEnd(localScores(), game.history, true); return; }
+  if (game.round >= game.total) {
+    const sc = localScores();
+    const top = Math.max(...sc.map((p) => p.score));
+    sc.forEach((p) => recordGame(p.name, p.score === top && top > 0));
+    showEnd(sc, game.history, true);
+    return;
+  }
   game.round++;
   game.player = game.players[(game.round - 1) % game.players.length];
   renderScores(localScores());
   $('#g-online-players').classList.add('hidden');
   try { game.song = await pickSong(game); } catch (err) { go('game'); setFeedback('⚠️ ' + err.message, 'bad'); return; }
   await startRoundUI({
-    label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}`,
+    label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}`, who: game.player, streak: game.streak[game.player] || 0,
     steps: game.steps, offset: game.start === 'random' ? -1 : 0, preview: game.song.preview,
   });
 }
@@ -486,14 +665,20 @@ function localHandle(msg) {
   const stepAt = R.step;
   handleVerdict(v);
   if (!R.done) return;
+  const who = game.player;
   const pts = v.ok ? v.pts : 0;
-  game.scores[game.player] += pts;
-  game.history.push({ ...game.song, note: `${game.player}: ${v.ok ? `${R.steps[stepAt]}s, +${pts}` : 'non indovinata'}` });
+  game.scores[who] += pts;
+  game.streak[who] = v.ok ? (game.streak[who] || 0) + 1 : 0;
+  const streak = game.streak[who];
+  recordRound(who, { ok: v.ok, t: R.steps[stepAt], song: game.song, cat: game.cat, streak });
+  game.history.push({ ...game.song, note: `${who}: ${v.ok ? `${R.steps[stepAt]}s, +${pts}` : 'non indovinata'}` });
   renderScores(localScores());
+  const hits = R.hits;
   setTimeout(() => showReveal(game.song, {
-    ok: v.ok,
-    text: v.ok ? `🎉 ${game.player} l'ha indovinata in ${R.steps[stepAt]} s · +${pts}` : `💩 ${game.player} non l'ha indovinata`,
+    ok: v.ok, streak,
+    text: v.ok ? `🎉 ${who} l'ha indovinata in ${R.steps[stepAt]} s · +${pts}` : `💩 ${who} non l'ha indovinata`,
     nextLabel: game.round >= game.total ? 'Classifica finale' : 'Prossima canzone',
+    actors: [{ name: who, ok: v.ok, hits, record: true }],
   }), 450);
 }
 
@@ -542,7 +727,7 @@ $('#room-open').addEventListener('click', () => {
     const peer = new Peer(PEER_PREFIX + code, { debug: 0 });
     peer.on('open', () => {
       Object.assign(net, { role: 'host', peer, code });
-      net.players = new Map([['host', { id: 'host', name, conn: null, score: 0 }]]);
+      net.players = new Map([['host', { id: 'host', name, conn: null, score: 0, streak: 0, look: Chars.lookFor(name) }]]);
       $('#room-status').textContent = isLocalHost()
         ? '⚠️ Sei sulla versione locale (127.0.0.1): per gli amici usa il sito online.'
         : '';
@@ -572,7 +757,7 @@ function hostOnConnection(conn) {
       let name = base;
       const names = new Set([...net.players.values()].map((p) => p.name.toLowerCase()));
       for (let i = 2; names.has(name.toLowerCase()); i++) name = `${base.slice(0, 17)} ${i}`;
-      net.players.set(conn.peer, { id: conn.peer, name, conn, score: 0 });
+      net.players.set(conn.peer, { id: conn.peer, name, conn, score: 0, streak: 0, look: Chars.clean(msg.look, name) });
       conn.send({ t: 'welcome', name });
       broadcastLobby(); renderRoom();
       toast(`${name} è entrato`);
@@ -597,20 +782,20 @@ function sendTo(p, msg) {
   else { try { p.conn.open && p.conn.send(msg); } catch { /* uscito */ } }
 }
 const broadcast = (msg) => net.players.forEach((p) => sendTo(p, msg));
-const scoreList = () => [...net.players.values()].map((p) => ({ name: p.name, score: p.score }));
+const scoreList = () => [...net.players.values()].map((p) => ({ name: p.name, score: p.score, streak: p.streak, look: p.look }));
 function broadcastLobby() { broadcast({ t: 'lobby', players: [...net.players.values()].map((p) => p.name) }); }
 
 function sendStatus() {
   const list = [...net.players.values()].map((p) => {
     const s = hg?.st.get(p.id);
-    return { name: p.name, score: p.score, state: !s ? 'wait' : s.ok ? 'ok' : s.done ? 'out' : 'play', t: s?.ok ? hg.steps[s.step] : null };
+    return { name: p.name, score: p.score, streak: p.streak, look: p.look, state: !s ? 'wait' : s.ok ? 'ok' : s.done ? 'out' : 'play', t: s?.ok ? hg.steps[s.step] : null };
   });
   broadcast({ t: 'status', players: list });
 }
 
 function hostStart(o) {
-  net.players.forEach((p) => { p.score = 0; });
-  hg = { ...o, total: o.songs, n: 0, pool: filteredPool(), queue: [], history: [], st: new Map(), status: 'loading' };
+  net.players.forEach((p) => { p.score = 0; p.streak = 0; });
+  hg = { ...o, cat: catIdNow(), total: o.songs, n: 0, pool: filteredPool(), queue: [], history: [], st: new Map(), status: 'loading' };
   hg.queue = shuffle(hg.pool);
   hostNextRound();
 }
@@ -621,10 +806,11 @@ async function hostNextRound() {
   hg.status = 'loading';
   try { hg.song = await pickSong(hg); } catch (err) { toast(err.message, 5000); return; }
   hg.offset = hg.start === 'random' ? Math.random() * Math.max(0, 29.5 - hg.steps[hg.steps.length - 1]) : 0;
-  hg.st = new Map([...net.players.keys()].map((id) => [id, { step: 0, done: false, ok: false, pts: 0 }]));
+  hg.st = new Map([...net.players.keys()].map((id) => [id, { step: 0, done: false, ok: false, pts: 0, hits: 0 }]));
   hg.firstOk = false;
   hg.status = 'playing';
-  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time });
+  const streaks = Object.fromEntries([...net.players.values()].map((p) => [p.name, p.streak]));
+  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks });
   sendStatus();
   clearTimeout(hg.timer);
   hg.timer = setTimeout(hostEndRound, (hg.time + 2) * 1000); // 2 s di margine per il caricamento
@@ -640,12 +826,13 @@ function hostHandle(pid, msg) {
     const pts = hg.steps.length - s.step + (hg.firstOk ? 0 : 1); // +1 a chi la indovina per primo
     hg.firstOk = true;
     Object.assign(s, { ok: true, done: true, pts });
-    p.score += pts;
+    p.score += pts; p.streak++;
     v = { kind: 'guess', ok: true, pts, title: String(msg.pick.title || '') };
   } else if (msg.t === 'giveup') {
     s.done = true;
     v = { kind: 'giveup', ok: false, done: true };
   } else if (msg.t === 'guess' || msg.t === 'skip') {
+    s.hits++;
     if (s.step >= last) s.done = true; else s.step++;
     v = { kind: msg.t, ok: false, done: s.done, step: s.step, title: String(msg.pick?.title || '').slice(0, 120) };
   } else return;
@@ -664,12 +851,13 @@ function hostEndRound() {
   hg.status = 'reveal';
   const results = [...net.players.values()].filter((p) => hg.st.has(p.id)).map((p) => {
     const s = hg.st.get(p.id);
-    return { name: p.name, ok: s.ok, t: s.ok ? hg.steps[s.step] : null, pts: s.pts };
+    if (!s.ok) p.streak = 0;
+    return { name: p.name, look: p.look, ok: s.ok, t: s.ok ? hg.steps[s.step] : null, pts: s.pts, hits: s.hits, streak: p.streak };
   }).sort((a, b) => b.pts - a.pts);
   const winners = results.filter((r) => r.ok).map((r) => r.name);
   hg.history.push({ ...hg.song, note: winners.length ? `indovinata da ${winners.join(', ')}` : 'nessuno' });
   const song = { id: hg.song.id, title: hg.song.title, artist: hg.song.artist, cover: hg.song.cover, year: hg.song.year };
-  broadcast({ t: 'reveal', song, results, scores: scoreList(), last: hg.n >= hg.total });
+  broadcast({ t: 'reveal', song, results, scores: scoreList(), last: hg.n >= hg.total, cat: hg.cat });
   let left = 15; // si va avanti da soli dopo 15 secondi
   clearInterval(hg.nextTimer);
   hg.nextTimer = setInterval(() => {
@@ -712,7 +900,7 @@ $('#join-go').addEventListener('click', () => {
   peer.on('open', () => {
     const conn = peer.connect(PEER_PREFIX + code, { reliable: true });
     Object.assign(net, { role: 'guest', peer, conn, code });
-    conn.on('open', () => conn.send({ t: 'join', name }));
+    conn.on('open', () => conn.send({ t: 'join', name, look: Chars.lookFor(name) }));
     conn.on('data', clientOnMessage);
     conn.on('close', () => {
       if (net.conn !== conn) return;
@@ -747,7 +935,7 @@ function clientOnMessage(msg) {
       break;
     case 'round':
       $('#g-online-players').classList.remove('hidden');
-      startRoundUI({ label: `Canzone ${msg.n}/${msg.total}`, turn: net.myName, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time });
+      startRoundUI({ label: `Canzone ${msg.n}/${msg.total}`, turn: net.myName, who: net.myName, streak: msg.streaks?.[net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time });
       break;
     case 'verdict':
       handleVerdict(msg);
@@ -764,17 +952,23 @@ function clientOnMessage(msg) {
       const me = msg.results.find((r) => r.name === net.myName);
       const host = net.role === 'host';
       renderScores(msg.scores);
+      if (me) recordRound(net.myName, { ok: me.ok, t: me.t, song: msg.song, cat: msg.cat || 'custom', streak: me.streak });
       showReveal(msg.song, {
-        ok: !!me?.ok,
+        ok: !!me?.ok, streak: me?.streak || 0,
+        actors: msg.results.map((r) => ({ name: r.name, look: Chars.clean(r.look, r.name), ok: r.ok, hits: r.hits, record: r.name === net.myName })),
         text: me?.ok ? `🎉 Indovinata in ${me.t} s · +${me.pts}` : '💩 Non l\'hai indovinata',
         results: msg.results, canNext: host,
         nextLabel: host ? (msg.last ? 'Classifica finale' : 'Prossima canzone') : 'In attesa dell\'host…',
       });
       break;
     }
-    case 'end':
+    case 'end': {
+      const top = Math.max(...msg.scores.map((p) => p.score));
+      const mine = msg.scores.find((p) => p.name === net.myName);
+      if (mine) recordGame(net.myName, mine.score === top && top > 0);
       showEnd(msg.scores, msg.history, net.role === 'host');
       break;
+    }
   }
 }
 
