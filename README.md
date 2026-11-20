@@ -18,6 +18,7 @@ Quiz musicale: ascolti un frammento di 0,1 secondi e provi a indovinare la canzo
 | `ragdoll.js` | personaggi con fisica (matter.js): scheletro a 11 pezzi, ferite con ossa e spina dorsale, 14 morti, effetti sonori |
 | `catalogo.txt` | elenco dei mazzi di base (Artista | Titolo | Anno | Genere | Opera) |\| Titolo \| Anno \| Genere) |
 | `build-starter.mjs` | rigenera `starter.js` da `catalogo.txt`: `node build-starter.mjs` |
+| `bump-version.mjs` | aggiorna il numero di versione dei file in `index.html` prima di pubblicare |
 
 ## Avvio in locale
 

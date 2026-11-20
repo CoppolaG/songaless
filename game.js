@@ -1136,6 +1136,9 @@ function renderChars() {
   $('#ce-photo').textContent = l?.photo ? '📷 Cambia foto' : '📷 Scegli una foto';
   $$('#ce-style button').forEach((b) => b.classList.toggle('on', (l?.faceStyle === 'photo' ? 'photo' : 'eyes') === b.dataset.style));
   ceBuild();
+  const on = document.querySelector('#ce-grid .char-card.on'); // nella striscia del telefono: porta in vista il selezionato
+  const grid = document.querySelector('#ce-grid');
+  if (on && grid.scrollWidth > grid.clientWidth) grid.scrollTo({ left: on.offsetLeft - grid.clientWidth / 2 + on.clientWidth / 2, behavior: 'smooth' });
 }
 const ceSave = (look) => { Chars.setLook(ceWho, look); renderChars(); };
 $('#ce-grid').addEventListener('click', (e) => { const b = e.target.closest('[data-ce]'); if (!b) return; ceWho = b.dataset.ce; renderChars(); });
