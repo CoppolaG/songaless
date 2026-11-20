@@ -25,7 +25,7 @@ const Chars = (() => {
   }
   function randomLook(old = {}) {
     const r = (a) => a[Math.floor(Math.random() * a.length)];
-    return { color: r(COLORS), skin: r(SKINS), hat: r(HATS), glasses: Math.random() < 0.3, stache: Math.random() < 0.25, photo: old.photo };
+    return { color: r(COLORS), skin: r(SKINS), hat: r(HATS), glasses: Math.random() < 0.3, stache: Math.random() < 0.25, photo: old.photo, faceStyle: old.faceStyle };
   }
   const MAX_PHOTO = 60000; // ~45 KB di immagine
   // aspetto che arriva da un altro dispositivo o dal salvataggio: accettiamo solo valori noti
@@ -35,6 +35,7 @@ const Chars = (() => {
     const hex = (v, fb) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : fb);
     const out = { color: hex(look.color, d.color), skin: hex(look.skin, d.skin), hat: HATS.includes(look.hat) ? look.hat : d.hat, glasses: !!look.glasses, stache: !!look.stache };
     if (typeof look.photo === 'string' && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(look.photo) && look.photo.length <= MAX_PHOTO) out.photo = look.photo;
+    if (look.faceStyle === 'photo') out.faceStyle = 'photo'; // altrimenti: foto con gli occhi da cartone
     return out;
   }
   const lookFor = (name) => clean((store('looks') || {})[String(name).toLowerCase()], name);
@@ -59,5 +60,15 @@ const Chars = (() => {
     });
   }
 
-  return { lookFor, setLook, clean, randomLook, defaultLook, photoFromFile };
+  // ritaglio scelto a mano: (cx, cy) centro e side lato del quadrato, in pixel dell'immagine originale
+  function cropToPhoto(img, cx, cy, side) {
+    const S = 160; const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const x = c.getContext('2d'); x.fillStyle = '#888'; x.fillRect(0, 0, S, S);
+    x.drawImage(img, cx - side / 2, cy - side / 2, side, side, 0, 0, S, S);
+    let q = 0.85; let out = c.toDataURL('image/jpeg', q);
+    while (out.length > MAX_PHOTO && q > 0.3) { q -= 0.12; out = c.toDataURL('image/jpeg', q); }
+    return out;
+  }
+
+  return { lookFor, setLook, clean, randomLook, defaultLook, photoFromFile, cropToPhoto };
 })();

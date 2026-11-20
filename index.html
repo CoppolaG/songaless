@@ -19,6 +19,7 @@
 <header class="top">
   <button class="logo" data-go="home" aria-label="Home"><span class="logo-dot"></span>indovina<b>la canzone</b></button>
   <nav>
+    <button data-go="chars" class="pill"><span class="pill-ico">👤</span><span class="pill-txt">Personaggi</span></button>
     <button data-go="saved" class="pill"><span class="pill-ico">★</span><span class="pill-txt">Segnate</span> <span id="saved-badge" class="badge hidden"></span></button>
     <button data-go="settings" class="pill"><span class="pill-ico">⚙</span><span class="pill-txt">Impostazioni</span></button>
   </nav>
@@ -231,6 +232,7 @@
     <div id="setup-local" class="panel">
       <div class="panel-head"><h3>Chi gioca?</h3><p class="muted small">Tocca i nomi per selezionarli.</p></div>
       <div id="roster" class="chips roster"></div>
+      <p class="small"><button class="link" data-go="chars">✏️ Personaggi e facce</button></p>
       <div class="row">
         <input id="player-name" placeholder="Aggiungi un nome" maxlength="20">
         <button id="player-add" class="btn">Aggiungi</button>
@@ -379,6 +381,43 @@
     </div>
   </section>
 
+  <!-- PERSONAGGI -->
+  <section id="screen-chars" class="screen hidden">
+    <div class="page-head">
+      <button class="back" data-go="home">← Home</button>
+      <h2>Personaggi</h2>
+    </div>
+    <div class="chars-layout">
+      <div class="panel char-editor">
+        <div id="ce-stage" class="ce-stage"></div>
+        <h3 id="ce-name" class="ce-name"></h3>
+        <div class="row center">
+          <button id="ce-kill" class="btn">💀 Prova una morte</button>
+          <button id="ce-dance" class="btn ghost">🎉 Balla</button>
+        </div>
+        <h4 class="f-title">Faccia</h4>
+        <div class="row">
+          <button id="ce-photo" class="btn primary">📷 Scegli una foto</button>
+          <button id="ce-camera" class="btn">🤳 Scatta</button>
+          <button id="ce-nophoto" class="btn ghost hidden">Togli la foto</button>
+        </div>
+        <div id="ce-style" class="seg-choice hidden">
+          <button data-style="eyes" class="on">Foto con occhi cartoon</button>
+          <button data-style="photo">Solo foto</button>
+        </div>
+        <h4 class="f-title">Aspetto</h4>
+        <div class="row">
+          <button id="ce-reroll" class="btn">🎲 Cambia a caso</button>
+          <button id="ce-reset" class="btn ghost">Ripristina</button>
+        </div>
+        <p class="muted small">Le foto restano su questo dispositivo e vengono mandate solo agli altri giocatori della stanza in cui entri.</p>
+      </div>
+      <div class="char-grid" id="ce-grid"></div>
+    </div>
+    <input id="ce-file" type="file" accept="image/*" class="hidden">
+    <input id="ce-file-cam" type="file" accept="image/*" capture="user" class="hidden">
+  </section>
+
   <!-- STATISTICHE -->
   <section id="screen-stats" class="screen hidden">
     <div class="page-head">
@@ -409,6 +448,20 @@
     <div class="rv-actions">
       <button id="rv-save" class="btn">☆ Segna</button>
       <button id="rv-next" class="btn primary">Prossima canzone</button>
+    </div>
+  </div>
+</div>
+
+<!-- RITAGLIO DELLA FOTO -->
+<div id="crop" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+  <div class="crop-card">
+    <h3 id="crop-title">Sistema la faccia</h3>
+    <p class="muted small">Trascina per spostare, usa lo slider (o la rotella) per lo zoom. Metti la faccia dentro il cerchio, con gli occhi sulla linea.</p>
+    <div class="crop-box"><canvas id="crop-canvas" width="280" height="280"></canvas></div>
+    <label class="crop-zoom">Zoom <input id="crop-zoom" type="range" min="1" max="5" step="0.01" value="1.3"></label>
+    <div class="row center">
+      <button id="crop-cancel" class="btn ghost">Annulla</button>
+      <button id="crop-ok" class="btn primary">Usa questa foto</button>
     </div>
   </div>
 </div>

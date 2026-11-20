@@ -483,3 +483,38 @@ h3 { font-size: 1.08rem; font-weight: 700; }
 .rv-sub { color: var(--muted); margin: 4px 0 0; font-size: .92rem; }
 .suggest .s-kind { font-size: 1.2rem; width: 40px; text-align: center; flex: none; }
 @media (max-width: 600px) { .genre-pill { font-size: .8rem; padding: 5px 10px; } }
+
+/* ---------- personaggi ---------- */
+.chars-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.char-editor { text-align: center; }
+.ce-stage { display: flex; justify-content: center; min-height: 240px; border-radius: 16px; background: radial-gradient(circle at 50% 70%, rgba(255,212,38,.08), transparent 60%); }
+.ce-stage canvas { display: block; }
+.ce-name { font-size: 1.5rem; text-transform: capitalize; margin-top: 6px; }
+.char-editor .row { justify-content: center; }
+.char-editor .f-title { text-align: left; }
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.char-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; backdrop-filter: blur(18px);
+  transition: border-color .2s, transform .2s var(--ease);
+}
+.char-card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.char-card.on { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,212,38,.15); }
+.char-card span { font-weight: 700; text-transform: capitalize; font-size: .9rem; }
+.char-card em { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: .8rem; }
+.char-card .portrait { width: 44px; height: auto; }
+.seg-choice { display: inline-flex; margin-top: 12px; background: var(--surface2); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.seg-choice button { background: none; border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 600; color: var(--muted); font-size: .88rem; }
+.seg-choice button.on { background: var(--accent); color: var(--accent-ink); }
+
+/* ritaglio */
+.crop-overlay { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; padding: 16px; background: rgba(5,5,9,.7); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.crop-card { width: min(360px, 100%); background: var(--surface-solid); border: 1px solid var(--line-strong); border-radius: 24px; padding: 20px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.crop-card p { margin: 6px 0 12px; }
+.crop-box { display: flex; justify-content: center; }
+#crop-canvas { width: 280px; max-width: 100%; height: auto; aspect-ratio: 1; border-radius: 16px; touch-action: none; cursor: grab; }
+#crop-canvas:active { cursor: grabbing; }
+.crop-zoom { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; }
+.crop-zoom input { margin: 0; padding: 0; accent-color: var(--accent); background: none; border: 0; }
+
+@media (max-width: 760px) { .chars-layout { grid-template-columns: 1fr; } }

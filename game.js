@@ -76,6 +76,8 @@ function go(name, opts = {}) {
   if (name === 'settings') setSettingsTab(opts.tab || 'rules');
   if (name === 'saved') renderSaved();
   if (name === 'stats') renderStats();
+  if (name === 'chars') { renderChars(); if (opts.who) { ceWho = opts.who; renderChars(); } }
+  else if (typeof ceStage !== 'undefined' && ceStage) { ceStage.destroy(); ceStage = null; ceRag = null; }
   window.lenis ? window.lenis.scrollTo(0, { immediate: true }) : window.scrollTo(0, 0);
   FX('screenIn', el);
 }
@@ -422,7 +424,7 @@ function renderStats() {
     const favDeath = Object.entries(s.deaths).sort((a, b) => b[1] - a[1])[0];
     return `<div class="stat-card spot">
       <div class="stat-head">${Ragdoll.portrait(Chars.lookFor(s.name), 56)}<div><h3>${esc(s.name)}</h3><span class="muted small">${s.games} partite · ${s.wins} vinte</span></div>
-        <span class="stat-btns"><button class="reroll" data-reroll="${esc(s.name)}" title="Cambia aspetto">🎲</button><button class="reroll" data-photo="${esc(s.name)}" title="Usa una foto come faccia">📷</button>${Chars.lookFor(s.name).photo ? `<button class="reroll" data-nophoto="${esc(s.name)}" title="Togli la foto">✕</button>` : ''}</span></div>
+        <button class="reroll" data-editchar="${esc(s.name)}" title="Modifica personaggio e faccia">✏️</button></div>
       <div class="stat-nums">
         <div><b>${acc}%</b><span>indovinate</span></div>
         <div><b>${avg}${s.correct ? 's' : ''}</b><span>tempo medio</span></div>
@@ -439,6 +441,8 @@ function renderStats() {
   FX('stagger', $$('#stats-list > *'));
 }
 $('#stats-list').addEventListener('click', (e) => {
+  const ed = e.target.closest('[data-editchar]');
+  if (ed) { go('chars', { who: ed.dataset.editchar }); return; }
   const b = e.target.closest('[data-reroll]'); if (!b) return;
   Chars.setLook(b.dataset.reroll, Chars.randomLook(Chars.lookFor(b.dataset.reroll)));
   renderStats();
@@ -1108,6 +1112,109 @@ $('#g-suggest').addEventListener('mousedown', (e) => {
   e.preventDefault(); guess(suggestions[+li.dataset.i]);
 });
 $('#g-guess').addEventListener('blur', () => setTimeout(hideSuggest, 150));
+
+/* ============ Personaggi: anteprima, foto della faccia, aspetto ============ */
+let ceWho = null; let ceStage = null; let ceRag = null; let ceBusy = null;
+function ceBuild() {
+  ceStage?.destroy(); ceStage = null; ceRag = null; clearTimeout(ceBusy); ceBusy = null;
+  if (!ceWho) { $('#ce-stage').innerHTML = ''; return; }
+  if (!Ragdoll.available) { $('#ce-stage').innerHTML = Ragdoll.portrait(Chars.lookFor(ceWho), 90); return; }
+  const w = Math.max(240, Math.min(340, $('#ce-stage').clientWidth || 300));
+  ceStage = Ragdoll.stage($('#ce-stage'), { w, h: 240 });
+  ceRag = Ragdoll.addRag(ceStage, Chars.lookFor(ceWho), w / 2, 1.3);
+}
+function renderChars() {
+  if (!ceWho || !roster.includes(ceWho)) ceWho = roster[0] || null;
+  $('#ce-grid').innerHTML = roster.map((n) => {
+    const l = Chars.lookFor(n);
+    return `<button class="char-card ${n === ceWho ? 'on' : ''}" data-ce="${esc(n)}">${Ragdoll.portrait(l, 44)}<span>${esc(n)}</span>${l.photo ? '<em title="Ha la foto">📷</em>' : ''}</button>`;
+  }).join('');
+  const l = ceWho ? Chars.lookFor(ceWho) : null;
+  $('#ce-name').textContent = ceWho || 'Nessun giocatore';
+  $('#ce-nophoto').classList.toggle('hidden', !l?.photo);
+  $('#ce-style').classList.toggle('hidden', !l?.photo);
+  $('#ce-photo').textContent = l?.photo ? '📷 Cambia foto' : '📷 Scegli una foto';
+  $$('#ce-style button').forEach((b) => b.classList.toggle('on', (l?.faceStyle === 'photo' ? 'photo' : 'eyes') === b.dataset.style));
+  ceBuild();
+}
+const ceSave = (look) => { Chars.setLook(ceWho, look); renderChars(); };
+$('#ce-grid').addEventListener('click', (e) => { const b = e.target.closest('[data-ce]'); if (!b) return; ceWho = b.dataset.ce; renderChars(); });
+$('#ce-kill').addEventListener('click', () => {
+  if (!ceRag || ceBusy) return;
+  player.ctx = player.ctx || new AudioContext(); player.ctx.resume(); // per gli effetti sonori
+  const type = Ragdoll.kill(ceRag);
+  toast(`💀 ${ceWho} ${Ragdoll.LABEL[type]}`, 2200);
+  ceBusy = setTimeout(() => { ceBusy = null; ceBuild(); }, 3400);
+});
+$('#ce-dance').addEventListener('click', () => { if (ceRag && !ceBusy) Ragdoll.dance(ceRag); });
+$('#ce-photo').addEventListener('click', () => $('#ce-file').click());
+$('#ce-camera').addEventListener('click', () => $('#ce-file-cam').click());
+['#ce-file', '#ce-file-cam'].forEach((sel) => $(sel).addEventListener('change', (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (f && ceWho) openCrop(f);
+}));
+$('#ce-nophoto').addEventListener('click', () => { const l = Chars.lookFor(ceWho); delete l.photo; delete l.faceStyle; ceSave(l); });
+$('#ce-style').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-style]'); if (!b) return;
+  const l = Chars.lookFor(ceWho);
+  if (b.dataset.style === 'photo') l.faceStyle = 'photo'; else delete l.faceStyle;
+  ceSave(l);
+});
+$('#ce-reroll').addEventListener('click', () => ceSave(Chars.randomLook(Chars.lookFor(ceWho))));
+$('#ce-reset').addEventListener('click', () => { const l = Chars.lookFor(ceWho); ceSave({ ...Chars.defaultLook(ceWho), photo: l.photo, faceStyle: l.faceStyle }); });
+
+// ritaglio della foto: trascina per spostare, zoom con slider o rotella
+const crop = { img: null, zoom: 1.3, ox: 0, oy: 0, drag: null };
+const CB = 280; const CR = 105; // lato del riquadro e raggio del cerchio (px)
+const cropK = () => ((2 * CR) / Math.min(crop.img.width, crop.img.height)) * crop.zoom;
+function openCrop(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    Object.assign(crop, { img, zoom: 1.3, ox: 0, oy: 0 });
+    $('#crop-zoom').value = 1.3;
+    $('#crop').classList.remove('hidden'); window.lenis?.stop();
+    drawCrop();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Non riesco a leggere questa immagine'); };
+  img.src = url;
+}
+function drawCrop() {
+  const c = $('#crop-canvas'); const x = c.getContext('2d');
+  x.fillStyle = '#111'; x.fillRect(0, 0, CB, CB);
+  const k = cropK(); const w = crop.img.width * k; const h = crop.img.height * k;
+  x.drawImage(crop.img, CB / 2 - w / 2 + crop.ox, CB / 2 - h / 2 + crop.oy, w, h);
+  x.fillStyle = 'rgba(0,0,0,.62)'; x.beginPath(); x.rect(0, 0, CB, CB); x.arc(CB / 2, CB / 2, CR, 0, Math.PI * 2, true); x.fill();
+  x.strokeStyle = '#ffd426'; x.lineWidth = 2; x.beginPath(); x.arc(CB / 2, CB / 2, CR, 0, Math.PI * 2); x.stroke();
+  // guida per gli occhi (stessa posizione degli occhi cartoon)
+  const ey = CB / 2 - CR * 0.1;
+  x.setLineDash([5, 5]); x.strokeStyle = 'rgba(255,212,38,.7)'; x.beginPath(); x.moveTo(CB / 2 - CR * 0.8, ey); x.lineTo(CB / 2 + CR * 0.8, ey); x.stroke(); x.setLineDash([]);
+  [-1, 1].forEach((d) => { x.beginPath(); x.arc(CB / 2 + d * CR * 0.36, ey, 4, 0, Math.PI * 2); x.stroke(); });
+}
+function closeCrop() { $('#crop').classList.add('hidden'); window.lenis?.start(); crop.img = null; }
+const cv = $('#crop-canvas');
+cv.addEventListener('pointerdown', (e) => { if (!crop.img) return; cv.setPointerCapture(e.pointerId); crop.drag = { x: e.clientX, y: e.clientY, ox: crop.ox, oy: crop.oy }; });
+cv.addEventListener('pointermove', (e) => {
+  if (!crop.drag) return;
+  const scale = CB / cv.getBoundingClientRect().width; // la tela può essere rimpicciolita dal CSS
+  crop.ox = crop.drag.ox + (e.clientX - crop.drag.x) * scale; crop.oy = crop.drag.oy + (e.clientY - crop.drag.y) * scale; drawCrop();
+});
+cv.addEventListener('pointerup', () => { crop.drag = null; });
+cv.addEventListener('wheel', (e) => {
+  if (!crop.img) return; e.preventDefault();
+  crop.zoom = Math.min(5, Math.max(1, crop.zoom * (1 - e.deltaY * 0.0015))); $('#crop-zoom').value = crop.zoom; drawCrop();
+}, { passive: false });
+$('#crop-zoom').addEventListener('input', (e) => { if (!crop.img) return; crop.zoom = +e.target.value; drawCrop(); });
+$('#crop-cancel').addEventListener('click', closeCrop);
+$('#crop-ok').addEventListener('click', () => {
+  if (!crop.img || !ceWho) return closeCrop();
+  const k = cropK();
+  const photo = Chars.cropToPhoto(crop.img, crop.img.width / 2 - crop.ox / k, crop.img.height / 2 - crop.oy / k, (2 * CR) / k);
+  closeCrop();
+  ceSave({ ...Chars.lookFor(ceWho), photo });
+  toast('Faccia aggiornata 📷');
+});
 
 /* ============ Avvio ============ */
 if (!store('starterLoaded') || store('starterVersion') !== (window.STARTER_VERSION || 1)) loadStarter();

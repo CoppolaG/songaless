@@ -102,30 +102,39 @@ const Ragdoll = (() => {
     if (photo) {
       ctx.save(); ctx.clip(); ctx.drawImage(photo, -r, -r, r * 2, r * 2); ctx.restore();
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      if (mood === 'dead') {
-        ctx.lineWidth = 3 * s; ctx.strokeStyle = '#fff';
-        [-1, 1].forEach((d) => { ctx.beginPath(); ctx.moveTo(d * r * 0.42 - r * 0.15, -r * 0.25); ctx.lineTo(d * r * 0.42 + r * 0.15, r * 0.05); ctx.moveTo(d * r * 0.42 + r * 0.15, -r * 0.25); ctx.lineTo(d * r * 0.42 - r * 0.15, r * 0.05); ctx.stroke(); });
-      }
+      if (look.faceStyle === 'photo') {
+        if (mood === 'dead') {
+          ctx.lineWidth = 3 * s; ctx.strokeStyle = '#fff';
+          [-1, 1].forEach((d) => { ctx.beginPath(); ctx.moveTo(d * r * 0.42 - r * 0.15, -r * 0.25); ctx.lineTo(d * r * 0.42 + r * 0.15, r * 0.05); ctx.moveTo(d * r * 0.42 + r * 0.15, -r * 0.25); ctx.lineTo(d * r * 0.42 - r * 0.15, r * 0.05); ctx.stroke(); });
+        }
+      } else drawFace(ctx, r, s, mood, true); // foto con gli occhioni e la bocca degli omini sopra
     } else {
       ctx.fillStyle = charred ? '#2a2a2a' : look.skin; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = INK; ctx.strokeStyle = INK;
-      if (mood === 'dead') {
-        ctx.lineWidth = 2.6 * s;
-        [-1, 1].forEach((d) => { const ex = d * r * 0.38; ctx.beginPath(); ctx.moveTo(ex - r * 0.14, -r * 0.24); ctx.lineTo(ex + r * 0.14, r * 0.02); ctx.moveTo(ex + r * 0.14, -r * 0.24); ctx.lineTo(ex - r * 0.14, r * 0.02); ctx.stroke(); });
-        ctx.beginPath(); ctx.arc(0, r * 0.55, r * 0.22, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
-        ctx.fillStyle = '#ff7aa2'; ctx.beginPath(); ctx.ellipse(r * 0.1, r * 0.5, r * 0.1, r * 0.16, 0, 0, 7); ctx.fill();
-      } else {
-        const big = mood === 'hurt' ? 1.5 : 1;
-        [-1, 1].forEach((d) => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d * r * 0.36, -r * 0.1, r * 0.2 * big, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(d * r * 0.36 + r * 0.04, -r * 0.08, r * 0.09 * big, 0, 7); ctx.fill(); });
-        ctx.lineWidth = 2.4 * s; ctx.beginPath();
-        if (mood === 'hurt') { ctx.ellipse(0, r * 0.45, r * 0.16, r * 0.2, 0, 0, 7); ctx.fillStyle = '#5b1020'; ctx.fill(); ctx.stroke(); }
-        else if (mood === 'happy') { ctx.arc(0, r * 0.3, r * 0.36, 0.1, Math.PI - 0.1); ctx.closePath(); ctx.fillStyle = '#5b1020'; ctx.fill(); ctx.stroke(); }
-        else { ctx.arc(0, r * 0.25, r * 0.3, 0.35, Math.PI - 0.35); ctx.stroke(); }
-      }
+      drawFace(ctx, r, s, mood, false);
       if (look.glasses) { ctx.lineWidth = 2 * s; ctx.strokeStyle = INK; [-1, 1].forEach((d) => { ctx.beginPath(); ctx.arc(d * r * 0.36, -r * 0.1, r * 0.3, 0, 7); ctx.stroke(); }); ctx.beginPath(); ctx.moveTo(-r * 0.07, -r * 0.1); ctx.lineTo(r * 0.07, -r * 0.1); ctx.stroke(); }
       if (look.stache) { ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(-r * 0.18, r * 0.2, r * 0.2, r * 0.08, -0.25, 0, 7); ctx.ellipse(r * 0.18, r * 0.2, r * 0.2, r * 0.08, 0.25, 0, 7); ctx.fill(); }
     }
     drawHat(ctx, look.hat, look.color, r);
+  }
+  // occhi e bocca da cartone (sulla pelle disegnata o sopra la foto)
+  function drawFace(ctx, r, s, mood, onPhoto) {
+    const k = onPhoto ? 1.12 : 1; // sulla foto un po' più grandi, per leggerli bene
+    ctx.fillStyle = INK; ctx.strokeStyle = INK;
+    if (mood === 'dead') {
+      if (onPhoto) [-1, 1].forEach((d) => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d * r * 0.38, -r * 0.11, r * 0.22, 0, 7); ctx.fill(); });
+      ctx.lineWidth = 2.6 * s;
+      [-1, 1].forEach((d) => { const ex = d * r * 0.38; ctx.beginPath(); ctx.moveTo(ex - r * 0.14, -r * 0.24); ctx.lineTo(ex + r * 0.14, r * 0.02); ctx.moveTo(ex + r * 0.14, -r * 0.24); ctx.lineTo(ex - r * 0.14, r * 0.02); ctx.stroke(); });
+      ctx.beginPath(); ctx.arc(0, r * 0.55, r * 0.22, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+      ctx.fillStyle = '#ff7aa2'; ctx.beginPath(); ctx.ellipse(r * 0.1, r * 0.5, r * 0.1, r * 0.16, 0, 0, 7); ctx.fill();
+      return;
+    }
+    const big = (mood === 'hurt' ? 1.5 : 1) * k;
+    [-1, 1].forEach((d) => { ctx.fillStyle = '#fff'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.arc(d * r * 0.36, -r * 0.1, r * 0.2 * big, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(d * r * 0.36 + r * 0.04, -r * 0.08, r * 0.09 * big, 0, 7); ctx.fill(); });
+    ctx.lineWidth = 2.4 * s; ctx.beginPath();
+    if (mood === 'hurt') { ctx.ellipse(0, r * 0.45, r * 0.16, r * 0.2, 0, 0, 7); ctx.fillStyle = '#5b1020'; ctx.fill(); ctx.stroke(); }
+    else if (mood === 'happy') { ctx.arc(0, r * 0.3, r * 0.36, 0.1, Math.PI - 0.1); ctx.closePath(); ctx.fillStyle = '#5b1020'; ctx.fill(); ctx.stroke(); }
+    else if (onPhoto) { ctx.arc(0, r * 0.3, r * 0.3, 0.3, Math.PI - 0.3); ctx.lineWidth = 3 * s; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.lineWidth = 1.6 * s; ctx.strokeStyle = INK; ctx.stroke(); }
+    else { ctx.arc(0, r * 0.25, r * 0.3, 0.35, Math.PI - 0.35); ctx.stroke(); }
   }
   const PANTS = '#2d2d3d';
   function capsule(ctx, w, h, fill, s) { rr(ctx, -w / 2, -h / 2, w, h, w / 2); ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 2.2 * s; ctx.strokeStyle = INK; ctx.stroke(); }
