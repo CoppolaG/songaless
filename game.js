@@ -207,6 +207,7 @@ function renderSummary() {
   const o = readOpts(false);
   let who;
   if (mode === 'online') who = net.role === 'host' ? `${net.players.size} in stanza · ${o.songs} canzoni` : 'crea la stanza';
+  else if (typeof gmode !== 'undefined' && gmode === 'classic') who = '🎶 tutti insieme, una canzone dopo l\'altra';
   else who = players.length ? `${players.length} giocator${players.length === 1 ? 'e' : 'i'} · ${o.rounds} round a testa` : 'scegli chi gioca';
   $('#setup-summary').textContent = who;
 }
@@ -226,6 +227,10 @@ function parsePick(text) {
 }
 function renderModes() {
   $$('.gmode').forEach((b) => b.classList.toggle('on', b.dataset.gmode === gmode));
+  $('#setup-local').classList.toggle('hidden', mode === 'online' || gmode === 'classic');
+  $$('#s-atype [data-atype]').forEach((b) => b.classList.toggle('on', b.dataset.atype === atype));
+  $('#buzz-opt').classList.toggle('hidden', mode !== 'online' || gmode === 'own');
+  $('#opt-buzzer').checked = store('buzzer') === true;
   const ch = gmode !== 'classic';
   $('#setup-cat').classList.toggle('hidden', ch);
   $('#picks').classList.toggle('hidden', !ch);
@@ -294,7 +299,7 @@ $('#game-start').addEventListener('click', async () => {
   const o = readOpts();
   player.ctx = player.ctx || new AudioContext(); // sbloccato da questo clic
   player.ctx.resume();
-  if (mode === 'local' && !players.length) { alert('Tocca i nomi di chi gioca.'); return; }
+  if (mode === 'local' && gmode !== 'classic' && !players.length) { alert('Tocca i nomi di chi gioca.'); return; }
   if (mode === 'online' && net.role !== 'host') { alert('Prima crea la stanza.'); return; }
   let ch = null;
   if (gmode === 'classic') {
@@ -332,6 +337,7 @@ function renderSteps() {
   $('#g-skip').textContent = last ? 'Salta' : `Salta (+${+(R.steps[R.step + 1] - R.steps[R.step]).toFixed(2)}s)`;
   $('#g-skip').disabled = last || R.done;
   $('#g-play-label').innerHTML = R.done ? '' : `Ascolta <b>${R.steps[R.step]} s</b>`;
+  renderHints();
 }
 
 function renderAttempts() {
@@ -343,9 +349,11 @@ function renderAttempts() {
   }).join('');
 }
 
-function playSnippet() {
+// cont = true: riparte da dove si era fermato e suona solo il pezzo nuovo
+function playSnippet(cont = false) {
   if (!R || R.done || $('#g-play').disabled) return;
-  const dur = R.steps[R.step];
+  const from = cont === true && R.step > 0 ? R.steps[R.step - 1] : 0;
+  const dur = R.steps[R.step] - from;
   const btn = $('#g-play');
   btn.classList.add('playing');
   const fill = $$('#g-steps .seg')[R.step]?.querySelector('.fill');
@@ -355,7 +363,7 @@ function playSnippet() {
     fill.style.transition = `width ${dur}s linear`; fill.style.width = '100%';
   }
   FX('punch', btn);
-  player.play(R.offset, dur, () => {
+  player.play(R.offset + from, dur, () => {
     btn.classList.remove('playing');
     if (fill) { fill.style.transition = 'width .3s'; fill.style.width = '0'; }
   });
@@ -366,19 +374,19 @@ function setFeedback(msg, cls = '') {
   const f = $('#g-feedback'); f.textContent = msg; f.className = 'feedback ' + cls;
 }
 
-async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time, genre = '', workMode = false }) {
+async function startRoundUI({ label, turn, who, streak = 0, steps, offset, preview, time, genre = '', workMode = false, atype: at = 'title', hints = null, buzzer = false }) {
   clearInterval(roundTimer);
   hideReveal(true);
   const prevAv = R?.av;
   const gi = genreInfo(genre);
-  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv, workMode, gi };
+  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv, workMode: workMode && at === 'title', gi, atype: at, hints, buzzer, holding: false, buzzLocked: false };
+  clearInterval(buzzTick);
   if (currentScreen() !== 'game') go('game');
   $('#g-round').textContent = label;
   $('#g-turn').textContent = turn || '';
   $('#g-genre').textContent = gi.label;
   $('#g-genre').className = 'genre-pill ' + gi.cls;
-  $('#g-goal').textContent = workMode ? `🎯 Indovina ${gi.ask || 'il film'}` : '';
-  $('#g-guess').placeholder = workMode ? `Scrivi il nome ${gi.of || 'del film'}…` : 'Scrivi titolo o artista…';
+  setAnswerUI();
   FX('pop', $('#g-genre'));
   if (R.av) R.av.destroy?.();
   R.av = null; R.rag = null;
@@ -388,7 +396,7 @@ async function startRoundUI({ label, turn, who, streak = 0, steps, offset, previ
   $('#g-streak').classList.toggle('hidden', streak < 2);
   FX('pop', $('#g-avatar'));
   $('#g-guess-area').classList.remove('hidden');
-  $('#g-guess').value = ''; hideSuggest();
+  $('#g-guess').value = ''; hideSuggest(); setAnswerUI();
   $('#g-play').disabled = true;
   setFeedback('Carico la canzone…');
   renderSteps(); renderAttempts();
@@ -399,7 +407,8 @@ async function startRoundUI({ label, turn, who, streak = 0, steps, offset, previ
     if (R.offset < 0) R.offset = Math.random() * Math.max(0, player.duration - steps[steps.length - 1] - 0.5);
     $('#g-play').disabled = false;
     setFeedback(player.precise ? '' : 'Riproduzione in modalità meno precisa');
-    $('#g-guess').focus({ preventScroll: true });
+    if (!R.buzzer) $('#g-guess').focus({ preventScroll: true });
+    else setFeedback('Ascolta e premi 🔔 quando la sai!');
   } catch { setFeedback('⚠️ Anteprima non disponibile', 'bad'); }
 }
 
@@ -425,18 +434,21 @@ function lockRound() { $('#g-guess-area').classList.add('hidden'); hideSuggest()
 // risposta (giudice locale o host) a un tentativo
 function handleVerdict(v) {
   if (!R || R.done) return;
-  const label = v.kind === 'guess' ? v.title : v.kind === 'skip' ? 'Saltato' : 'Mi arrendo';
+  const label = v.kind === 'guess' ? v.title : v.kind === 'skip' ? 'Saltato' : v.kind === 'timeout' ? 'Tempo scaduto' : 'Mi arrendo';
+  const dirTxt = v.dir ? (v.dir === 'up' ? ' · 📈 più recente' : ' · 📉 più vecchia') : '';
+  R.holding = false; clearInterval(buzzTick);
   R.attempts[R.step] = { type: v.ok ? 'right' : v.kind === 'guess' ? 'wrong' : 'skip', text: label };
   if (!v.ok && v.kind !== 'giveup') { R.hits++; Ragdoll.damage(R.rag, R.hits); } // perde un pezzo
   if (v.ok) {
     R.done = true;
-    setFeedback(`✓ Indovinata in ${R.steps[R.step]} s! +${v.pts}`, 'ok');
+    setFeedback(`${v.exact ? '🎯 Anno esatto!' : '✓ Indovinata'} in ${R.steps[R.step]} s! +${v.pts}`, 'ok');
   } else if (v.done) {
     R.done = true;
-    setFeedback(v.kind === 'giveup' ? 'Ti sei arreso' : 'Tentativi finiti', 'bad');
+    setFeedback(v.kind === 'giveup' ? 'Ti sei arreso' : v.kind === 'timeout' ? '⏱️ Tempo scaduto: sei fuori per questa canzone' : v.out ? `✗ Non è "${v.title}"${dirTxt}: sei fuori per questa canzone` : `Tentativi finiti${dirTxt}`, 'bad');
   } else {
     R.step = v.step;
-    setFeedback(v.kind === 'guess' ? `✗ Non è "${v.title}"` : '', 'bad');
+    setFeedback(v.kind === 'guess' ? `✗ Non è "${v.title}"${dirTxt}` : '', 'bad');
+    setAnswerUI();
     if (v.kind === 'guess') FX('shake', $('#g-guess'));
   }
   renderSteps(); renderAttempts();
@@ -445,7 +457,7 @@ function handleVerdict(v) {
     lockRound();
     if (mode === 'online') $('#g-feedback').textContent += ' · aspetta gli altri…';
   } else {
-    setTimeout(playSnippet, 380); // sbagliato o saltato: parte subito il pezzo più lungo
+    setTimeout(() => playSnippet(true), 380); // sbagliato o saltato: continua da dove si era fermato
   }
 }
 
@@ -459,7 +471,12 @@ $('#g-skip').addEventListener('click', () => act({ t: 'skip' }));
 $('#g-giveup').addEventListener('click', () => act({ t: 'giveup' }));
 function guess(pick) {
   hideSuggest(); $('#g-guess').value = '';
-  act({ t: 'guess', pick: pick.work != null ? { work: String(pick.work).slice(0, 120) } : { id: pick.id, title: pick.title, artist: pick.artist } });
+  let p;
+  if (pick.year != null) p = { year: String(pick.year).slice(0, 4) };
+  else if (pick.artistName != null) p = { artistName: String(pick.artistName).slice(0, 80) };
+  else if (pick.work != null) p = { work: String(pick.work).slice(0, 120) };
+  else p = { id: pick.id, title: pick.title, artist: pick.artist };
+  act({ t: 'guess', pick: p });
 }
 
 function renderScores(list, el = $('#g-scores')) {
@@ -701,14 +718,14 @@ $('#saved-clear').addEventListener('click', () => {
 
 let lastEnd = null;
 const lookOf = (p) => lookByName(p.name);
-function showEnd(scores, history, canRestart) {
+function showEnd(scores, history, canRestart, title = null) {
   player.stop(); clearInterval(roundTimer); hideReveal(true);
   go('end');
   const sorted = [...scores].sort((a, b) => b.score - a.score);
   lastEnd = { sorted };
   const best = sorted[0]?.score || 0;
   const tied = sorted.filter((p) => p.score === best);
-  $('#end-winner').textContent = !sorted.length ? 'Fine' : best === 0 ? '😶 Nessuno ha fatto punti' : tied.length > 1 ? `🤝 Pareggio tra ${tied.map((p) => p.name).join(' e ')}!` : `🏆 Vince ${sorted[0].name}!`;
+  $('#end-winner').textContent = title || !sorted.length ? (title || 'Fine') : best === 0 ? '😶 Nessuno ha fatto punti' : tied.length > 1 ? `🤝 Pareggio tra ${tied.map((p) => p.name).join(' e ')}!` : `🏆 Vince ${sorted[0].name}!`;
   // podio: secondo, primo, terzo
   $('#podium').innerHTML = [1, 0, 2].map((i) => {
     const p = sorted[i];
@@ -797,31 +814,42 @@ $('#end-again').addEventListener('click', () => go('setup'));
 let game = null;
 const localScores = () => Object.entries(game.scores).map(([name, score]) => ({ name, score, streak: game.streak[name] || 0 }));
 function localStart(o, ch = null) {
+  const group = !ch; // modalità classica sullo stesso schermo: tutti insieme, senza turni
+  const ps = group ? ['Voi'] : players.slice();
   game = {
-    ...o, total: o.rounds * players.length, round: 0, players: players.slice(), cat: ch ? 'sfida' : catIdNow(),
-    scores: Object.fromEntries(players.map((p) => [p, 0])), streak: {},
-    pool: ch?.shared || filteredPool(), queue: [], history: [], ch,
+    ...o, atype, group, total: group ? Infinity : o.rounds * ps.length, round: 0, played: 0, okCount: 0, players: ps, cat: ch ? 'sfida' : catIdNow(),
+    scores: Object.fromEntries(ps.map((p) => [p, 0])), streak: {},
+    pool: poolFor(atype, ch?.shared || filteredPool()), queue: [], history: [], ch,
   };
+  if (!game.pool.length && ch?.gmode !== 'own') { game = null; alert('Nessuna canzone adatta (per "Anno" servono canzoni con l\'anno già catalogato).'); return; }
   game.queue = shuffle(game.pool);
-  if (ch?.gmode === 'own') game.own = Object.fromEntries(game.players.map((p) => [p, { pool: ch.pools[p], queue: shuffle(ch.pools[p]) }]));
+  if (ch?.gmode === 'own') game.own = Object.fromEntries(game.players.map((p) => { const pool = poolFor(atype, ch.pools[p]); return [p, { pool, queue: shuffle(pool) }]; }));
   localNextRound();
 }
-async function localNextRound() {
-  if (game.round >= game.total) {
-    const sc = localScores();
-    const top = Math.max(...sc.map((p) => p.score));
-    sc.forEach((p) => recordGame(p.name, p.score === top && top > 0));
-    showEnd(sc, game.history, true);
+function endLocalGame() {
+  if (!game) return;
+  if (game.group) {
+    showEnd([], game.history, true, `🎶 Avete indovinato ${game.okCount} canzon${game.okCount === 1 ? 'e' : 'i'} su ${game.played}`);
     return;
   }
+  const sc = localScores();
+  const top = Math.max(...sc.map((p) => p.score));
+  sc.forEach((p) => recordGame(p.name, p.score === top && top > 0));
+  showEnd(sc, game.history, true);
+}
+async function localNextRound() {
+  if (game.round >= game.total) { endLocalGame(); return; }
   game.round++;
   game.player = game.players[(game.round - 1) % game.players.length];
   renderScores(localScores());
+  $('#g-scores-title').textContent = game.group ? 'Il gruppo' : 'Classifica';
   $('#g-online-players').classList.add('hidden');
   try { game.song = await pickSong(game.own ? game.own[game.player] : game); } catch (err) { go('game'); setFeedback('⚠️ ' + err.message, 'bad'); return; }
   const pk = game.ch?.picks[game.player];
   await startRoundUI({
-    label: `Round ${game.round}/${game.total}`, turn: `Tocca a ${game.player}${game.own && pk ? ` · ${pk.label}` : ''}`, who: game.player, streak: game.streak[game.player] || 0,
+    label: game.group ? `Canzone ${game.round} · ✓ ${game.okCount}/${game.played}` : `Round ${game.round}/${game.total}`,
+    turn: game.group ? '🎶 Tutti insieme' : `Tocca a ${game.player}${game.own && pk ? ` · ${pk.label}` : ''}`, who: game.player, streak: game.streak[game.player] || 0,
+    atype: game.atype, hints: makeHints(game.song, game.atype),
     steps: game.steps, offset: game.start === 'random' ? -1 : 0, preview: game.song.preview,
     genre: game.song.genres?.[0] || '', workMode: !!game.song.work?.length,
   });
@@ -829,9 +857,11 @@ async function localNextRound() {
 function localHandle(msg) {
   const last = R.step >= R.steps.length - 1;
   let v;
-  if (msg.t === 'guess' && isCorrect(msg.pick, game.song)) v = { kind: 'guess', ok: true, pts: R.steps.length - R.step, title: msg.pick.work || msg.pick.title };
+  const j = msg.t === 'guess' ? judge(msg.pick, game.song, R.atype) : null;
+  if (j?.ok) v = { kind: 'guess', ok: true, pts: R.steps.length - R.step + (j.exact ? 2 : 0), title: j.label, exact: j.exact };
   else if (msg.t === 'giveup') v = { kind: 'giveup', ok: false, done: true };
-  else v = { kind: msg.t, ok: false, done: last, step: R.step + 1, title: msg.pick?.work || msg.pick?.title };
+  else if (msg.t === 'guess' || msg.t === 'skip') v = { kind: msg.t, ok: false, done: last, step: R.step + 1, title: j?.label, dir: j?.dir };
+  else return;
   const stepAt = R.step;
   handleVerdict(v);
   if (!R.done) return;
@@ -840,15 +870,16 @@ function localHandle(msg) {
   game.scores[who] += pts;
   game.streak[who] = v.ok ? (game.streak[who] || 0) + 1 : 0;
   const streak = game.streak[who];
-  recordRound(who, { ok: v.ok, t: R.steps[stepAt], song: game.song, cat: game.cat, streak });
+  game.played++; if (v.ok) game.okCount++;
+  if (!game.group) recordRound(who, { ok: v.ok, t: R.steps[stepAt], song: game.song, cat: game.cat, streak });
   game.history.push({ ...game.song, note: `${who}: ${v.ok ? `${R.steps[stepAt]}s, +${pts}` : 'non indovinata'}` });
   renderScores(localScores());
   const hits = R.hits;
   setTimeout(() => showReveal(game.song, {
     ok: v.ok, streak,
-    text: v.ok ? `🎉 ${who} l'ha indovinata in ${R.steps[stepAt]} s · +${pts}` : `💩 ${who} non l'ha indovinata`,
+    text: game.group ? (v.ok ? `🎉 Indovinata in ${R.steps[stepAt]} s!` : '💩 Non l\'avete indovinata') : v.ok ? `🎉 ${who} l'ha indovinata in ${R.steps[stepAt]} s · +${pts}` : `💩 ${who} non l'ha indovinata`,
     nextLabel: game.round >= game.total ? 'Classifica finale' : 'Prossima canzone',
-    actors: [{ name: who, ok: v.ok, hits, record: true }],
+    actors: [{ name: who, ok: v.ok, hits, record: !game.group }],
   }), 450);
 }
 
@@ -969,12 +1000,13 @@ function sendStatus() {
 
 function hostStart(o, ch = null) {
   net.players.forEach((p) => { p.score = 0; p.streak = 0; });
-  hg = { ...o, cat: ch ? 'sfida' : catIdNow(), total: o.songs, n: 0, pool: ch?.shared || filteredPool(), queue: [], history: [], st: new Map(), status: 'loading', ch };
+  hg = { ...o, atype, buzzer: store('buzzer') === true && ch?.gmode !== 'own', cat: ch ? 'sfida' : catIdNow(), total: o.songs, n: 0, pool: poolFor(atype, ch?.shared || filteredPool()), queue: [], history: [], st: new Map(), status: 'loading', ch };
+  if (!hg.pool.length && ch?.gmode !== 'own') { hg = null; alert('Nessuna canzone adatta (per "Anno" servono canzoni con l\'anno già catalogato).'); return; }
   hg.queue = shuffle(hg.pool);
   if (ch?.gmode === 'own') {
     // a turno: ogni canzone è della scelta di un giocatore, e risponde solo lui
     hg.order = Object.keys(ch.pools);
-    hg.own = Object.fromEntries(hg.order.map((n) => [n, { pool: ch.pools[n], queue: shuffle(ch.pools[n]) }]));
+    hg.own = Object.fromEntries(hg.order.map((n) => { const pool = poolFor(atype, ch.pools[n]); return [n, { pool, queue: shuffle(pool) }]; }));
     hg.total = Math.ceil(o.songs / hg.order.length) * hg.order.length;
   }
   hostNextRound();
@@ -998,9 +1030,10 @@ async function hostNextRound() {
   const ids = ownerId ? [ownerId] : [...net.players.keys()];
   hg.st = new Map(ids.map((id) => [id, { step: 0, done: false, ok: false, pts: 0, hits: 0 }]));
   hg.firstOk = false;
+  hg.buzz = { holder: null, timer: null };
   hg.status = 'playing';
   const streaks = Object.fromEntries([...net.players.values()].map((p) => [p.name, p.streak]));
-  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks, genre: hg.song.genres?.[0] || '', workMode: !!hg.song.work?.length, owner, pickLabel: owner ? hg.ch.picks[owner].label : '' });
+  broadcast({ t: 'round', n: hg.n, total: hg.total, steps: hg.steps, offset: hg.offset, preview: hg.song.preview, time: hg.time, streaks, genre: hg.song.genres?.[0] || '', workMode: !!hg.song.work?.length, owner, pickLabel: owner ? hg.ch.picks[owner].label : '', atype: hg.atype, hints: makeHints(hg.song, hg.atype), buzzer: hg.buzzer });
   sendStatus();
   clearTimeout(hg.timer);
   hg.timer = setTimeout(hostEndRound, (hg.time + 2) * 1000); // 2 s di margine per il caricamento
@@ -1011,20 +1044,38 @@ function hostHandle(pid, msg) {
   const s = hg.st.get(pid); const p = net.players.get(pid);
   if (!s || !p || s.done) return;
   const last = hg.steps.length - 1;
+  // buzzer: il primo che preme ha 10 secondi, gli altri aspettano
+  if (msg.t === 'buzz') {
+    if (!hg.buzzer || hg.buzz.holder) return;
+    hg.buzz.holder = pid;
+    clearTimeout(hg.buzz.timer);
+    hg.buzz.timer = setTimeout(() => buzzExpire(pid), 10000);
+    broadcast({ t: 'buzz', name: p.name, secs: 10 });
+    return;
+  }
+  if (hg.buzzer && msg.t === 'guess' && hg.buzz.holder !== pid) return;
+  const releaseBuzz = () => { if (hg.buzz.holder === pid) { clearTimeout(hg.buzz.timer); hg.buzz.holder = null; broadcast({ t: 'buzzfree', out: p.name }); } };
   let v;
-  if (msg.t === 'guess' && isCorrect(msg.pick, hg.song)) {
-    const pts = hg.steps.length - s.step + (hg.firstOk ? 0 : 1); // +1 a chi la indovina per primo
+  const j = msg.t === 'guess' ? judge(msg.pick, hg.song, hg.atype) : null;
+  if (j?.ok) {
+    const pts = hg.steps.length - s.step + (hg.firstOk ? 0 : 1) + (j.exact ? 2 : 0); // +1 a chi la indovina per primo, +2 anno esatto
     hg.firstOk = true;
     Object.assign(s, { ok: true, done: true, pts });
     p.score += pts; p.streak++;
-    v = { kind: 'guess', ok: true, pts, title: String(msg.pick.work || msg.pick.title || '').slice(0, 120) };
+    clearTimeout(hg.buzz.timer);
+    v = { kind: 'guess', ok: true, pts, title: j.label, exact: j.exact };
   } else if (msg.t === 'giveup') {
-    s.done = true;
+    s.done = true; releaseBuzz();
     v = { kind: 'giveup', ok: false, done: true };
+  } else if (msg.t === 'guess' && hg.buzzer) {
+    s.hits++; s.done = true; // col buzzer chi sbaglia è fuori per questa canzone
+    v = { kind: 'guess', ok: false, done: true, out: true, title: j.label, dir: j.dir };
+    sendTo(p, { t: 'verdict', ...v }); releaseBuzz(); sendStatus(); checkRoundEnd();
+    return;
   } else if (msg.t === 'guess' || msg.t === 'skip') {
     s.hits++;
     if (s.step >= last) s.done = true; else s.step++;
-    v = { kind: msg.t, ok: false, done: s.done, step: s.step, title: String(msg.pick?.work || msg.pick?.title || '').slice(0, 120) };
+    v = { kind: msg.t, ok: false, done: s.done, step: s.step, title: j?.label || '', dir: j?.dir };
   } else return;
   sendTo(p, { t: 'verdict', ...v });
   sendStatus();
@@ -1032,12 +1083,22 @@ function hostHandle(pid, msg) {
 }
 
 function checkRoundEnd() {
-  if (hg?.status === 'playing' && [...hg.st.values()].every((s) => s.done)) hostEndRound();
+  if (hg?.status !== 'playing') return;
+  const sts = [...hg.st.values()];
+  if (sts.every((s) => s.done) || (hg.buzzer && sts.some((s) => s.ok))) hostEndRound();
+}
+function buzzExpire(pid) {
+  if (!hg || hg.status !== 'playing' || hg.buzz.holder !== pid) return;
+  const s = hg.st.get(pid); const p = net.players.get(pid);
+  hg.buzz.holder = null;
+  if (s && !s.done && p) { s.done = true; sendTo(p, { t: 'verdict', kind: 'timeout', ok: false, done: true }); }
+  broadcast({ t: 'buzzfree', out: p?.name || '' });
+  sendStatus(); checkRoundEnd();
 }
 
 function hostEndRound() {
   if (hg.status !== 'playing') return;
-  clearTimeout(hg.timer);
+  clearTimeout(hg.timer); clearTimeout(hg.buzz?.timer);
   hg.status = 'reveal';
   const results = [...net.players.values()].filter((p) => hg.st.has(p.id)).map((p) => {
     const s = hg.st.get(p.id);
@@ -1128,6 +1189,7 @@ function clientOnMessage(msg) {
       break;
     case 'round':
       $('#g-online-players').classList.remove('hidden');
+      $('#g-scores-title').textContent = 'Classifica';
       {
         const owner = msg.owner ? String(msg.owner).slice(0, 20) : null;
         const label = String(msg.pickLabel || '').slice(0, 70);
@@ -1136,12 +1198,28 @@ function clientOnMessage(msg) {
           label: `Canzone ${msg.n}/${msg.total}`, turn: owner ? (mine ? `Tocca a te · ${label}` : `Tocca a ${owner} · ${label}`) : net.myName,
           who: owner || net.myName, streak: msg.streaks?.[owner || net.myName] || 0, steps: msg.steps, offset: msg.offset, preview: msg.preview, time: msg.time,
           genre: String(msg.genre || '').slice(0, 40), workMode: !!msg.workMode,
+          atype: ['title', 'year', 'artist'].includes(msg.atype) ? msg.atype : 'title',
+          hints: Array.isArray(msg.hints) ? msg.hints.slice(0, 2).map((h) => String(h).slice(0, 80)) : null, buzzer: !!msg.buzzer && mine && !msg.owner,
         }).then(() => { if (!mine && R) { R.spectator = true; lockRound(); setFeedback(`👀 Sta rispondendo ${owner}: puoi ascoltare, ma non rispondere`); } });
         if (!mine) { R.spectator = true; lockRound(); }
       }
       break;
     case 'verdict':
       handleVerdict(msg);
+      break;
+    case 'buzz': {
+      if (!R || R.done || !R.buzzer) break;
+      const mineBuzz = msg.name === net.myName;
+      R.holding = mineBuzz; R.buzzLocked = !mineBuzz;
+      setAnswerUI();
+      if (mineBuzz) { $('#g-guess').focus({ preventScroll: true }); buzzCountdown(+msg.secs || 10); } else setFeedback(`🔔 ${String(msg.name).slice(0, 20)} sta rispondendo…`);
+      break;
+    }
+    case 'buzzfree':
+      if (!R || R.done || !R.buzzer) break;
+      R.holding = false; R.buzzLocked = false; clearInterval(buzzTick);
+      setAnswerUI();
+      setFeedback(msg.out && msg.out !== net.myName ? `✗ ${String(msg.out).slice(0, 20)} non l'ha presa: prenotati!` : 'Premi 🔔 quando la sai!');
       break;
     case 'status':
       $('#g-online-players').innerHTML = msg.players.map((p) => {
@@ -1181,6 +1259,10 @@ function hideSuggest() { $('#g-suggest').classList.add('hidden'); suggestions = 
 function renderSuggest() {
   const ul = $('#g-suggest');
   if (!suggestions.length) { ul.classList.add('hidden'); return; }
+  if (R?.atype === 'artist') {
+    ul.innerHTML = suggestions.map((s, i) => `<li data-i="${i}" class="${i === sel ? 'sel' : ''}"><img src="${esc(s.cover)}" alt="" style="border-radius:50%"><div>${esc(s.artistName)}</div></li>`).join('');
+    ul.classList.remove('hidden'); return;
+  }
   if (R?.workMode) {
     ul.innerHTML = suggestions.map((s, i) => `<li data-i="${i}" class="${i === sel ? 'sel' : ''}"><span class="s-kind">${R.gi.icon}</span><div>${esc(s.work)}</div></li>`).join('');
     ul.classList.remove('hidden'); return;
@@ -1194,7 +1276,20 @@ function renderSuggest() {
 $('#g-guess').addEventListener('input', (e) => {
   clearTimeout(debounce);
   const q = e.target.value.trim();
-  if (q.length < 2) { hideSuggest(); return; }
+  if (q.length < 2 || R?.atype === 'year') { hideSuggest(); return; }
+  if (R?.atype === 'artist') {
+    debounce = setTimeout(async () => {
+      const my = ++searchSeq;
+      try {
+        const r = await dz('search/artist', { q, limit: 8 });
+        if (my !== searchSeq || !R || R.done) return;
+        const seenA = new Set();
+        suggestions = (r.data || []).filter((a) => { const k = keyOf(a.name); if (seenA.has(k)) return false; seenA.add(k); return true; }).map((a) => ({ artistName: a.name, cover: a.picture_small || '' }));
+        sel = -1; renderSuggest();
+      } catch { /* ignora */ }
+    }, 220);
+    return;
+  }
   if (R?.workMode) {
     const k = workKey(q);
     suggestions = allWorks().filter((w) => w.alias.some((a) => workKey(a).includes(k))).slice(0, 8).map((w) => ({ work: w.title }));
@@ -1216,8 +1311,7 @@ $('#g-guess').addEventListener('input', (e) => {
 $('#g-guess').addEventListener('keydown', (e) => {
   if (e.key === 'ArrowDown' && suggestions.length) { sel = (sel + 1) % suggestions.length; renderSuggest(); e.preventDefault(); }
   else if (e.key === 'ArrowUp' && suggestions.length) { sel = (sel - 1 + suggestions.length) % suggestions.length; renderSuggest(); e.preventDefault(); }
-  else if (e.key === 'Enter' && suggestions.length) { guess(suggestions[Math.max(sel, 0)]); e.preventDefault(); }
-  else if (e.key === 'Enter' && R?.workMode && e.target.value.trim()) { guess({ work: e.target.value.trim() }); e.preventDefault(); }
+  else if (e.key === 'Enter') { submitTyped(); e.preventDefault(); }
   else if (e.key === 'Escape') hideSuggest();
 });
 $('#g-suggest').addEventListener('mousedown', (e) => {
@@ -1330,6 +1424,190 @@ $('#crop-ok').addEventListener('click', () => {
   closeCrop();
   ceSave({ ...Chars.lookFor(ceWho), photo });
   toast('Faccia aggiornata 📷');
+});
+
+/* ============ Cosa indovinare (titolo / anno / artista) e indizi ============ */
+let atype = ['title', 'year', 'artist'].includes(store('atype')) ? store('atype') : 'title';
+let hintsOn = store('hints') !== false;
+const poolFor = (type, pool) => (type === 'year' ? pool.filter((s) => s.year) : pool);
+function matchArtist(guess, artist) {
+  const g = keyOf(guess);
+  if (g.length < 2) return false;
+  const parts = [artist, ...String(artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b|\band\b)\s*/i)].map(keyOf).filter(Boolean);
+  return parts.some((k) => k === g || (g.length >= 4 && k.includes(g) && g.length >= k.length * 0.5) || (k.length > 5 && lev(g, k) <= 2));
+}
+// giudica una risposta secondo il tipo del round
+function judge(pick, song, type) {
+  if (type === 'year') {
+    const y = parseInt(pick?.year, 10);
+    if (!y || !song.year) return { ok: false, label: String(pick?.year || '?') };
+    const d = y - song.year;
+    return { ok: Math.abs(d) <= 1, exact: d === 0, dir: d < 0 ? 'up' : 'down', label: String(y) };
+  }
+  if (type === 'artist') return { ok: matchArtist(pick?.artistName, song.artist), label: String(pick?.artistName || '').slice(0, 80) };
+  return { ok: isCorrect(pick, song), label: String(pick?.work || pick?.title || '').slice(0, 120) };
+}
+const initials = (t) => String(t || '').split(/\s+/).filter(Boolean).map((w) => [...w][0].toUpperCase() + '_'.repeat(Math.max(0, [...w].length - 1))).join(' ');
+// indizi che compaiono a 8 s e a 15 s
+function makeHints(song, type) {
+  const yr = song.year || '?';
+  const g = song.genres?.[0] ? genreInfo(song.genres[0]).label.replace(/^\S+\s/, '') : '';
+  if (type === 'year') return [`🎤 ${song.artist}`, `🎵 ${song.title}`];
+  if (type === 'artist') return [`📅 ${yr}${g ? ' · ' + g : ''}`, `🔤 ${initials(song.artist)}`];
+  if (song.work?.length) return [`📅 Uscito nel ${yr}`, `🔤 ${initials(song.work[0])}`];
+  return [`📅 ${yr}${g ? ' · ' + g : ''}`, `🎤 ${song.artist}`];
+}
+function renderHints() {
+  const box = $('#g-hints');
+  if (!R || !hintsOn || R.done || !R.hints) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const t = R.steps[R.step];
+  const show = [t >= 8 ? R.hints[0] : null, t >= 15 ? R.hints[1] : null].filter(Boolean);
+  const before = box.childElementCount;
+  box.innerHTML = show.map((h) => `<span class="hint">💡 ${esc(h)}</span>`).join('');
+  box.classList.toggle('hidden', !show.length);
+  if (show.length > before) FX('pop', box.lastElementChild);
+}
+// casella di risposta adatta al tipo (e al buzzer)
+function setAnswerUI() {
+  if (!R) return;
+  const a = R.atype; const inp = $('#g-guess');
+  inp.inputMode = a === 'year' ? 'numeric' : 'text';
+  inp.maxLength = a === 'year' ? 4 : 120;
+  inp.placeholder = a === 'year' ? 'In che anno è uscita? (es. 1998)' : a === 'artist' ? 'Chi canta? Scrivi l\'artista…' : R.workMode ? `Scrivi il nome ${R.gi.of || 'del film'}…` : 'Scrivi titolo o artista…';
+  $('#g-goal').textContent = a === 'year' ? '📅 Indovina l\'anno (±1)' : a === 'artist' ? '🎤 Chi canta?' : R.workMode ? `🎯 Indovina ${R.gi.ask || 'il film'}` : '';
+  const waitBuzz = R.buzzer && !R.holding;
+  $('#g-buzz').classList.toggle('hidden', !waitBuzz);
+  $('#g-buzz').disabled = !!R.buzzLocked;
+  $('.guess-wrap').classList.toggle('hidden', waitBuzz);
+}
+function submitTyped() {
+  if (!R || R.done) return;
+  const v = $('#g-guess').value.trim();
+  if (suggestions.length && R.atype !== 'year') { guess(suggestions[Math.max(sel, 0)]); return; }
+  if (!v) return;
+  if (R.atype === 'year') { if (!/^\d{4}$/.test(v)) { toast('Scrivi un anno di 4 cifre'); return; } guess({ year: v }); }
+  else if (R.atype === 'artist') guess({ artistName: v });
+  else if (R.workMode) guess({ work: v });
+  else toast('Scegli la canzone dai suggerimenti');
+}
+$('#g-submit').addEventListener('click', submitTyped);
+$('#opt-buzzer').addEventListener('change', (e) => { store('buzzer', e.target.checked); toast(e.target.checked ? '🔔 Buzzer attivo' : 'Buzzer spento', 1400); });
+$('#g-buzz').addEventListener('click', () => { if (R && !R.done && !R.buzzLocked) act({ t: 'buzz' }); });
+let buzzTick = null;
+function buzzCountdown(sec) {
+  clearInterval(buzzTick);
+  const end = Date.now() + sec * 1000;
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    if (!R || R.done || !R.holding) { clearInterval(buzzTick); return; }
+    setFeedback(`🔔 Tocca a te! Hai ${left} s`, 'ok');
+  };
+  tick(); buzzTick = setInterval(tick, 250);
+}
+
+/* ============ Linguette laterali: cambiare tutto durante l'ascolto ============ */
+let drawerSide = null;
+const canEdit = () => (mode === 'local' ? !!game : net.role === 'host' && !!hg);
+const inChallenge = () => (mode === 'local' ? !!game?.ch : !!hg?.ch);
+const currentAtype = () => (mode === 'local' ? game?.atype : hg?.atype) || atype;
+function openDrawer(which) {
+  drawerSide = which;
+  const d = $('#drawer');
+  d.classList.remove('hidden', 'from-left', 'from-right'); d.classList.add(which === 'cats' ? 'from-left' : 'from-right');
+  $('#drawer-title').textContent = which === 'cats' ? '🎚️ Categoria e genere' : '⚙️ Opzioni';
+  $$('[data-dpanel]').forEach((p) => p.classList.toggle('hidden', p.dataset.dpanel !== which));
+  renderDrawer(); window.lenis?.stop();
+  if (typeof gsap !== 'undefined') gsap.fromTo('.drawer-card', { x: which === 'cats' ? -50 : 50, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.35, ease: 'power3.out' });
+}
+function closeDrawer() { $('#drawer').classList.add('hidden'); window.lenis?.start(); }
+$$('[data-drawer]').forEach((b) => b.addEventListener('click', () => openDrawer(b.dataset.drawer)));
+$('#drawer').addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]')) closeDrawer(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').classList.contains('hidden')) closeDrawer(); });
+function renderDrawer() {
+  const edit = canEdit(); const chal = inChallenge();
+  $('#drawer-note').textContent = !edit
+    ? (mode === 'online' ? 'Solo chi ha creato la stanza può cambiare categoria e opzioni. Il volume e gli indizi li regoli tu.' : '')
+    : chal && drawerSide === 'cats' ? 'In sfida le canzoni arrivano dalle scelte dei giocatori: la categoria non si cambia.' : 'Le modifiche valgono dalla prossima canzone (o premi "Cambia canzone adesso").';
+  const off = !edit || chal;
+  $('#d-cats').innerHTML = CATEGORIES.map((c) => {
+    const missing = c.f.decks && !c.f.decks.some((n) => decks[n]);
+    return `<button class="cat small-cat ${sameFilters(filters, catFilters(c)) ? 'on' : ''}" data-dcat="${c.id}" ${off || missing ? 'disabled' : ''}><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span></button>`;
+  }).join('');
+  const bk = countBy(activePool(), (s) => [bucketOf(s)]);
+  $('#d-buckets').innerHTML = BUCKETS.filter((b) => bk.get(b.id)).map((b) =>
+    `<button class="cat small-cat ${sameFilters(filters, catFilters({ f: { buckets: [b.id] } })) ? 'on' : ''}" data-dbucket="${b.id}" ${off ? 'disabled' : ''}><span class="cat-icon">${b.icon}</span><span class="cat-name">${b.name}</span><span class="cat-desc">${bk.get(b.id)} canzoni</span></button>`).join('');
+  $('#d-count').textContent = edit && !chal ? `${poolFor(currentAtype(), filteredPool()).length} canzoni con questa scelta` : '';
+  $('#d-volume').value = player.volume;
+  $$('#d-atype [data-atype]').forEach((b) => { b.classList.toggle('on', b.dataset.atype === currentAtype()); b.disabled = !edit; });
+  $$('#d-hints [data-hints]').forEach((b) => b.classList.toggle('on', (b.dataset.hints === 'on') === hintsOn));
+  const o = readOpts(false);
+  const sv = o.steps.join(', ');
+  $('#d-steps').value = [...$('#d-steps').options].some((x) => x.value === sv) ? sv : $('#d-steps').options[0].value;
+  $('#d-steps').disabled = !edit; $('#d-start').value = o.start; $('#d-start').disabled = !edit;
+  $('#d-newsong').disabled = !edit; $('#d-end').disabled = !edit;
+}
+// nuovo insieme di canzoni dopo un cambio di categoria o di tipo di risposta
+function rebuildLivePool() {
+  const st = mode === 'local' ? game : hg;
+  if (!st) return true;
+  const t = st.atype;
+  if (st.ch) {
+    if (st.own) for (const [n, o] of Object.entries(st.own)) { o.pool = poolFor(t, st.ch.pools[n]); o.queue = shuffle(o.pool); }
+    else { st.pool = poolFor(t, st.ch.shared); st.queue = shuffle(st.pool); }
+    return true;
+  }
+  const pool = poolFor(t, filteredPool());
+  if (!pool.length) { toast('Nessuna canzone con questa scelta', 2500); return false; }
+  st.pool = pool; st.queue = shuffle(pool);
+  return true;
+}
+$('#d-cats').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-dcat]'); if (!b || b.disabled) return;
+  filters = catFilters(CATEGORIES.find((c) => c.id === b.dataset.dcat)); saveFilters();
+  if (rebuildLivePool()) toast('Fatto: dalla prossima canzone', 1500);
+  renderDrawer();
+});
+$('#d-buckets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-dbucket]'); if (!b || b.disabled) return;
+  filters = catFilters({ f: { buckets: [b.dataset.dbucket] } }); saveFilters();
+  if (rebuildLivePool()) toast('Fatto: dalla prossima canzone', 1500);
+  renderDrawer();
+});
+$('#d-volume').addEventListener('input', (e) => player.setVolume(e.target.value));
+function setAtype(t) {
+  atype = t; store('atype', t);
+  const st = mode === 'local' ? game : hg;
+  if (st) { st.atype = t; rebuildLivePool(); }
+  $$('#s-atype [data-atype]').forEach((b) => b.classList.toggle('on', b.dataset.atype === t));
+}
+$('#d-atype').addEventListener('click', (e) => { const b = e.target.closest('[data-atype]'); if (!b || b.disabled) return; setAtype(b.dataset.atype); toast('Fatto: dalla prossima canzone', 1500); renderDrawer(); });
+$('#s-atype').addEventListener('click', (e) => { const b = e.target.closest('[data-atype]'); if (!b) return; setAtype(b.dataset.atype); renderSummary(); });
+$('#d-hints').addEventListener('click', (e) => { const b = e.target.closest('[data-hints]'); if (!b) return; hintsOn = b.dataset.hints === 'on'; store('hints', hintsOn); renderHints(); renderDrawer(); });
+$('#d-steps').addEventListener('change', (e) => {
+  $('#opt-steps').value = e.target.value; const o = readOpts(true);
+  if (game) game.steps = o.steps; if (hg) hg.steps = o.steps;
+  toast('Fatto: dalla prossima canzone', 1500);
+});
+$('#d-start').addEventListener('change', (e) => {
+  $('#opt-start').value = e.target.value; readOpts(true);
+  if (game) game.start = e.target.value; if (hg) hg.start = e.target.value;
+  toast('Fatto: dalla prossima canzone', 1500);
+});
+$('#d-newsong').addEventListener('click', () => {
+  closeDrawer();
+  if (mode === 'local' && game) {
+    player.stop(); hideReveal(true);
+    if (R && !R.done && game.song) game.history.push({ ...game.song, note: 'cambiata' });
+    if (game.group) game.round--; // nel gioco di gruppo il cambio non conta come canzone
+    localNextRound();
+  } else if (hg) {
+    if (hg.status === 'playing') { clearTimeout(hg.timer); clearTimeout(hg.buzz?.timer); hg.n--; hostNextRound(); } else if (hg.status === 'reveal') hostNext();
+  }
+});
+$('#d-end').addEventListener('click', () => {
+  closeDrawer();
+  if (mode === 'local' && game) endLocalGame();
+  else if (hg) { clearTimeout(hg.timer); clearTimeout(hg.buzz?.timer); hg.n = hg.total; hg.status = 'reveal'; hostNext(); }
 });
 
 /* ============ Avvio ============ */

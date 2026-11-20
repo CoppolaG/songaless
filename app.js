@@ -415,7 +415,13 @@ $('#sp-import').addEventListener('click', (e) => runImport(e.target, async () =>
 
 /* ============ Audio: Web Audio per una durata precisa al millisecondo ============ */
 const player = {
-  ctx: null, buffer: null, el: null, node: null, timer: null,
+  ctx: null, buffer: null, el: null, node: null, timer: null, master: null,
+  volume: (() => { const v = store('volume'); return typeof v === 'number' ? Math.min(1, Math.max(0, v)) : 0.9; })(),
+  setVolume(v) {
+    this.volume = Math.min(1, Math.max(0, +v || 0)); store('volume', this.volume);
+    if (this.master) this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.02);
+    if (this.el) this.el.volume = this.volume;
+  },
   async load(url) {
     this.stop(); this.buffer = null; this.el = null;
     try {
@@ -450,12 +456,16 @@ const player = {
         this.analyser = ctx.createAnalyser();
         this.analyser.fftSize = 128;
         this.analyser.connect(ctx.destination);
+        this.master = ctx.createGain(); // volume generale
+        this.master.gain.value = this.volume;
+        this.master.connect(this.analyser);
       }
-      src.connect(gain).connect(this.analyser);
+      src.connect(gain).connect(this.master);
       src.start(t, offset, dur);
       src.onended = () => { if (this.node === src) { this.node = null; onEnd?.(); } };
       this.node = src;
     } else if (this.el) {
+      this.el.volume = this.volume;
       this.el.currentTime = offset;
       this.el.play();
       this.timer = setTimeout(() => { this.el.pause(); onEnd?.(); }, dur * 1000);

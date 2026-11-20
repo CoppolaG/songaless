@@ -34,14 +34,14 @@ const Ragdoll = (() => {
       const src = c.createBufferSource(); src.buffer = noise(c);
       const f = c.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
       if (sweep) f.frequency.exponentialRampToValueAtTime(sweep, t + dur);
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * (typeof player !== 'undefined' ? player.volume : 1), t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       src.connect(f).connect(g).connect(c.destination); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.05);
     }
     function tone({ f0 = 120, f1 = 40, dur = 0.25, vol = 0.35, type = 'sine', delay = 0 }) {
       const c = ctx(); if (!c) return;
       const t = c.currentTime + delay;
       const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * (typeof player !== 'undefined' ? player.volume : 1), t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
     }
     const once = (k, ms, fn) => { const n = performance.now(); if (n - (lastAt[k] || 0) < ms) return; lastAt[k] = n; fn(); };
