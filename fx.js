@@ -185,7 +185,8 @@
   fx.shake = (el) => gsap.fromTo(el, { x: 0 }, { keyframes: { x: [-10, 9, -7, 5, -2, 0] }, duration: 0.45, ease: 'none' });
   fx.attemptIn = (li) => { if (li) gsap.fromTo(li, { x: -14, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.4 }); };
   fx.roundIn = () => {
-    gsap.fromTo('#g-steps .seg', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, stagger: 0.04, duration: 0.5, clearProps: 'transform' });
+    gsap.fromTo('#g-steps .tl-track', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.6, ease: 'power3.out', clearProps: 'transform' });
+    gsap.fromTo('#g-steps .tl-labels span', { autoAlpha: 0 }, { autoAlpha: 1, stagger: 0.04, duration: 0.35, delay: 0.2 });
     gsap.fromTo('#g-play', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.8, ease: 'elastic.out(1, 0.5)', clearProps: 'transform,opacity,visibility' });
     gsap.fromTo('#g-attempts li', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.03, duration: 0.35, clearProps: 'transform' });
   };

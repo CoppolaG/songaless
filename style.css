@@ -593,3 +593,24 @@ h3 { font-size: 1.08rem; font-weight: 700; }
 .drawer [disabled] { opacity: .4; pointer-events: none; }
 #s-atype { margin-top: 8px; }
 @media (max-width: 600px) { .side-tab { padding: 10px 6px; } .side-tab .st-txt { display: none; } }
+
+/* ---------- barra del tempo continua ---------- */
+.timebar { display: block; margin: 26px 4px 0; }
+.tl { position: relative; padding-bottom: 26px; }
+.tl-track {
+  position: relative; height: 14px; border-radius: 999px; background: rgba(255,255,255,.06);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.tl-unlocked { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: rgba(255,212,38,.16); box-shadow: inset 0 0 0 1px rgba(255,212,38,.45); transition: width .45s var(--ease); }
+.tl-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, #ffb020, var(--accent)); box-shadow: 0 0 14px rgba(255,212,38,.45); }
+.tl-tick { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; border-radius: 2px; background: rgba(255,255,255,.22); }
+.tl-tick.done { background: rgba(20,20,20,.45); }
+.tl-tick.current { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,.7); }
+.tl-head { position: absolute; top: 50%; left: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(255,212,38,.35), 0 0 16px rgba(255,212,38,.8); opacity: 0; transform: scale(.4); transition: opacity .2s, transform .2s; }
+.tl-head.on { opacity: 1; transform: scale(1); }
+.tl-labels { position: absolute; left: 0; right: 0; top: 22px; height: 18px; }
+.tl-labels span { position: absolute; transform: translateX(-50%); font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .2s; }
+.tl-labels span:last-child { transform: translateX(-100%); }
+.tl-labels span.done { color: rgba(255,255,255,.55); }
+.tl-labels span.current { color: var(--accent); font-weight: 800; }
+@media (max-width: 600px) { .tl-labels span { font-size: .62rem; } }

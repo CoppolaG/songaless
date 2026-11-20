@@ -328,11 +328,29 @@ async function pickSong(state) {
 /* ============ Round: interfaccia comune ============ */
 let R = null; // round di chi gioca su questo dispositivo
 
+// barra del tempo continua: le tacche sono le durate, distanziate con la radice quadrata così si vedono anche 0,1 e 0,5 s
+const tlPos = (t) => Math.sqrt(Math.max(0, t) / R.steps[R.steps.length - 1]) * 100;
+const tlFmt = (t) => `${String(+t.toFixed(2)).replace('.', ',')} s`;
 function renderSteps() {
-  $('#g-steps').innerHTML = R.steps.map((s, i) => {
-    const cls = R.done || i < R.step ? 'done' : i === R.step ? 'current' : '';
-    return `<div class="seg ${cls}"><div class="bar"><div class="fill"></div></div><span>${s}s</span></div>`;
-  }).join('');
+  const box = $('#g-steps');
+  if (box.dataset.round !== String(R.id)) { // costruita una volta per round, poi solo aggiornata (così le transizioni restano fluide)
+    box.dataset.round = String(R.id);
+    box.innerHTML = `<div class="tl">
+      <div class="tl-track">
+        <div class="tl-unlocked"></div><div class="tl-fill"></div>
+        ${R.steps.map((t, i) => `<span class="tl-tick" data-i="${i}" style="left:${tlPos(t)}%"></span>`).join('')}
+        <span class="tl-head"></span>
+      </div>
+      <div class="tl-labels">${R.steps.map((t, i) => `<span data-i="${i}" style="left:${tlPos(t)}%">${tlFmt(t)}</span>`).join('')}</div>
+    </div>`;
+  }
+  const cur = R.done ? R.steps[R.steps.length - 1] : R.steps[R.step];
+  box.querySelector('.tl-unlocked').style.width = `${tlPos(cur)}%`;
+  box.querySelectorAll('.tl-tick, .tl-labels span').forEach((el) => {
+    const i = +el.dataset.i;
+    el.classList.toggle('done', R.done || i < R.step);
+    el.classList.toggle('current', !R.done && i === R.step);
+  });
   const last = R.step >= R.steps.length - 1;
   $('#g-skip').textContent = last ? 'Salta' : `Salta (+${+(R.steps[R.step + 1] - R.steps[R.step]).toFixed(2)}s)`;
   $('#g-skip').disabled = last || R.done;
@@ -356,19 +374,30 @@ function playSnippet(cont = false) {
   const dur = R.steps[R.step] - from;
   const btn = $('#g-play');
   btn.classList.add('playing');
-  const fill = $$('#g-steps .seg')[R.step]?.querySelector('.fill');
-  if (fill) {
-    fill.style.transition = 'none'; fill.style.width = '0';
-    void fill.offsetWidth; // riparte l'animazione
-    fill.style.transition = `width ${dur}s linear`; fill.style.width = '100%';
-  }
   FX('punch', btn);
-  player.play(R.offset + from, dur, () => {
-    btn.classList.remove('playing');
-    if (fill) { fill.style.transition = 'width .3s'; fill.style.width = '0'; }
-  });
+  const stop = animateTimeline(from, from + dur);
+  player.play(R.offset + from, dur, () => { btn.classList.remove('playing'); stop(); });
 }
 $('#g-play').addEventListener('click', playSnippet);
+
+// cursore che scorre sulla barra mentre suona (da "from" a "to" secondi)
+let tlRaf = null;
+function animateTimeline(from, to) {
+  cancelAnimationFrame(tlRaf);
+  const fill = $('#g-steps .tl-fill'); const head = $('#g-steps .tl-head');
+  if (!fill || !head) return () => {};
+  const t0 = performance.now() + 30; // il suono parte 30 ms dopo
+  head.classList.add('on');
+  const set = (t) => { fill.style.width = `${tlPos(t)}%`; head.style.left = `${tlPos(t)}%`; };
+  set(from);
+  const step = (now) => {
+    const t = Math.min(to, from + Math.max(0, now - t0) / 1000);
+    set(t);
+    if (t < to) tlRaf = requestAnimationFrame(step);
+  };
+  tlRaf = requestAnimationFrame(step);
+  return () => { cancelAnimationFrame(tlRaf); set(to); head.classList.remove('on'); };
+}
 
 function setFeedback(msg, cls = '') {
   const f = $('#g-feedback'); f.textContent = msg; f.className = 'feedback ' + cls;
@@ -379,7 +408,7 @@ async function startRoundUI({ label, turn, who, streak = 0, steps, offset, previ
   hideReveal(true);
   const prevAv = R?.av;
   const gi = genreInfo(genre);
-  R = { steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv, workMode: workMode && at === 'title', gi, atype: at, hints, buzzer, holding: false, buzzLocked: false };
+  R = { id: (R?.id || 0) + 1, steps, step: 0, offset, done: false, attempts: [], hits: 0, who, av: prevAv, workMode: workMode && at === 'title', gi, atype: at, hints, buzzer, holding: false, buzzLocked: false };
   clearInterval(buzzTick);
   if (currentScreen() !== 'game') go('game');
   $('#g-round').textContent = label;
