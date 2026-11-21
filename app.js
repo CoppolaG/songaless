@@ -79,7 +79,38 @@ async function dzFind(artist, title) {
 let decks = store('decks') || {};
 let active = new Set(store('active') || Object.keys(decks));
 let storageWarned = false;
+// più schede aperte: prima di salvare recupero quello che le altre hanno aggiunto, così nessuna cancella il lavoro dell'altra
+// le eliminazioni sono condivise tra le schede, così un mazzo tolto non torna indietro
+const deletedDecks = new Set(store('deletedDecks') || []); const deletedSongs = new Set(store('deletedSongs') || []);
+const saveDeleted = () => { store('deletedDecks', [...deletedDecks]); store('deletedSongs', [...deletedSongs].slice(-600)); };
+function mergeFromStorage() {
+  (store('deletedDecks') || []).forEach((n) => deletedDecks.add(n));
+  (store('deletedSongs') || []).forEach((k) => deletedSongs.add(k));
+  let changed = false;
+  for (const n of deletedDecks) if (decks[n]) { delete decks[n]; active.delete(n); changed = true; }
+  for (const [n, list] of Object.entries(decks)) {
+    const keep = list.filter((x) => !deletedSongs.has(n + '|' + x.id));
+    if (keep.length !== list.length) { decks[n] = keep; changed = true; }
+  }
+  const stored = store('decks');
+  if (!stored || typeof stored !== 'object') return changed;
+  for (const [name, list] of Object.entries(stored)) {
+    if (deletedDecks.has(name) || !Array.isArray(list)) continue;
+    const isNew = !decks[name];
+    const mine = decks[name] || (decks[name] = []);
+    const byId = new Map(mine.map((x) => [String(x.id), x]));
+    for (const song of list) {
+      if (!song || song.id == null) continue;
+      const have = byId.get(String(song.id));
+      if (!have) { if (!deletedSongs.has(name + '|' + song.id)) { mine.push(song); byId.set(String(song.id), song); changed = true; } }
+      else if (song.meta && !have.meta) { Object.assign(have, song); changed = true; } // catalogata dall'altra scheda
+    }
+    if (isNew && mine.length) { active.add(name); changed = true; }
+  }
+  return changed;
+}
 const saveDecks = () => {
+  mergeFromStorage();
   const ok = store('decks', decks) && store('active', [...active]);
   if (!ok && !storageWarned) {
     storageWarned = true;
@@ -90,6 +121,8 @@ const saveDecks = () => {
 
 function addToDeck(name, songs) {
   name = name.trim() || 'Senza nome';
+  if (deletedDecks.delete(name)) saveDeleted();
+  for (const sg of songs) if (sg && deletedSongs.delete(name + '|' + sg.id)) saveDeleted();
   const list = decks[name] || (decks[name] = []);
   // niente doppioni: stesso id, oppure stessa canzone in un'altra versione (live, remaster, feat…)
   const key = (s) => norm(s.title) + '|' + norm(s.artist);
@@ -202,6 +235,15 @@ async function enrichAll() {
 }
 function enrichStatus(msg) { $$('.enrich-status').forEach((e) => { e.textContent = msg; }); }
 
+window.addEventListener('storage', (e) => {
+  if (!['sq.decks', 'sq.deletedDecks', 'sq.deletedSongs'].includes(e.key)) return;
+  if (mergeFromStorage()) {
+    renderDecks();
+    if (!document.getElementById('screen-setup').classList.contains('hidden')) renderFilters();
+    enrichAll();
+  }
+});
+
 const openDecks = new Set();
 function renderDecks() {
   const el = $('#deck-list');
@@ -236,6 +278,7 @@ $('#deck-list').addEventListener('click', (e) => {
   const songBtn = e.target.closest('[data-del-song]');
   if (songBtn) {
     const n = songBtn.dataset.deck;
+    deletedSongs.add(n + '|' + songBtn.dataset.delSong); saveDeleted();
     decks[n] = decks[n].filter((s) => String(s.id) !== songBtn.dataset.delSong);
     saveDecks(); renderDecks(); return;
   }
@@ -248,7 +291,7 @@ $('#deck-list').addEventListener('click', (e) => {
   }
   const act = e.target.dataset.act;
   if (act === 'toggle') { openDecks.has(n) ? openDecks.delete(n) : openDecks.add(n); renderDecks(); }
-  if (act === 'delete' && confirm(`Eliminare il mazzo "${n}"?`)) { delete decks[n]; active.delete(n); saveDecks(); renderDecks(); }
+  if (act === 'delete' && confirm(`Eliminare il mazzo "${n}"?`)) { deletedDecks.add(n); saveDeleted(); delete decks[n]; active.delete(n); saveDecks(); renderDecks(); }
 });
 
 /* ============ Import ============ */
