@@ -1641,6 +1641,7 @@ $('#d-end').addEventListener('click', () => {
 
 /* ============ Avvio ============ */
 if (!store('starterLoaded') || store('starterVersion') !== (window.STARTER_VERSION || 1)) loadStarter();
+recognizeKnownWorks(); // anime e film riconosciuti anche nelle playlist importate
 renderDecks();
 updateBadge();
 const roomParam = new URLSearchParams(location.search).get('stanza');

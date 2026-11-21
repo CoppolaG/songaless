@@ -119,6 +119,36 @@ const saveDecks = () => {
   return ok;
 };
 
+// riconosce film, cartoni e anime anche nelle playlist importate, confrontandole con il catalogo di base
+let knownWorks = null;
+const kKey = (x) => norm(x) || String(x || '').toLowerCase().replace(/\s+/g, '');
+const mainArtist = (x) => kKey(String(x || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?)\s*/i)[0]);
+function knownIndex() {
+  if (knownWorks) return knownWorks;
+  knownWorks = { byId: new Map(), byKey: new Map() };
+  for (const list of Object.values(window.STARTER_DECKS || {})) for (const s of list) {
+    if (!s.work?.length) continue;
+    knownWorks.byId.set(String(s.id), s);
+    knownWorks.byKey.set(kKey(s.title) + '|' + mainArtist(s.artist), s);
+  }
+  return knownWorks;
+}
+function applyKnown(song) {
+  if (!song || song.work?.length) return false;
+  const k = knownIndex();
+  const hit = k.byId.get(String(song.id)) || k.byKey.get(kKey(song.title) + '|' + mainArtist(song.artist));
+  if (!hit) return false;
+  Object.assign(song, { work: hit.work, genres: hit.genres, year: hit.year, yearManual: true, meta: 1 });
+  return true;
+}
+function recognizeKnownWorks() {
+  const base = new Set(Object.keys(window.STARTER_DECKS || {}));
+  let n = 0;
+  for (const [name, list] of Object.entries(decks)) if (!base.has(name)) for (const s of list) if (applyKnown(s)) n++;
+  if (n) saveDecks();
+  return n;
+}
+
 function addToDeck(name, songs) {
   name = name.trim() || 'Senza nome';
   if (deletedDecks.delete(name)) saveDeleted();
@@ -131,6 +161,7 @@ function addToDeck(name, songs) {
   let added = 0;
   for (const s of songs) {
     if (!s || ids.has(s.id) || keys.has(key(s))) continue;
+    applyKnown(s);
     list.push(s); ids.add(s.id); keys.add(key(s)); added++;
   }
   active.add(name);
@@ -615,6 +646,7 @@ const CATEGORIES = [
   { id: 'italiane', icon: '🇮🇹', name: 'Italiane', desc: 'Da Modugno a Olly', f: { decks: ['Musica italiana'] } },
   { id: 'internazionali', icon: '🌍', name: 'Internazionali', desc: 'Dagli anni 60 al 2025', f: { decks: ['Hit internazionali'] } },
   { id: 'sigle', icon: '📺', name: 'Sigle cartoni', desc: 'Cartoni italiani e anime', f: { decks: ['Sigle cartoni e anime'] } },
+  { id: 'anime', icon: '🇯🇵', name: 'Anime', desc: "Le sigle più famose: indovina l'anime", f: { decks: ['Anime'] } },
   { id: 'film', icon: '🎬', name: 'Film e Disney', desc: 'Colonne sonore', f: { decks: ['Film e Disney'] } },
   { id: 'sensational', icon: '🎤', name: 'Sensational', desc: 'Rap americano', f: { decks: ['Sensational'] } },
   { id: 'chicche', icon: '💎', name: 'Chicche', desc: 'Le meno famose', f: { pop: 'deep' } },
