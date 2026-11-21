@@ -519,7 +519,7 @@ const lookByName = (name) => (mode === 'online' && net.looks[name] ? net.looks[n
 
 /* ============ Statistiche personali ============ */
 const CAT_NAMES = Object.fromEntries(CATEGORIES.map((c) => [c.id, `${c.icon} ${c.name}`]));
-const catIdNow = () => CATEGORIES.find((c) => sameFilters(filters, catFilters(c)))?.id || 'custom';
+const catIdNow = () => allCategories().find((c) => sameFilters(filters, catFilters(c)))?.id || 'custom';
 let stats = store('stats') || {};
 const statOf = (name) => {
   const k = String(name).toLowerCase();
@@ -1558,9 +1558,9 @@ function renderDrawer() {
     ? (mode === 'online' ? 'Solo chi ha creato la stanza può cambiare categoria e opzioni. Il volume e gli indizi li regoli tu.' : '')
     : chal && drawerSide === 'cats' ? 'In sfida le canzoni arrivano dalle scelte dei giocatori: la categoria non si cambia.' : 'Le modifiche valgono dalla prossima canzone (o premi "Cambia canzone adesso").';
   const off = !edit || chal;
-  $('#d-cats').innerHTML = CATEGORIES.map((c) => {
+  $('#d-cats').innerHTML = allCategories().map((c) => {
     const missing = c.f.decks && !c.f.decks.some((n) => decks[n]);
-    return `<button class="cat small-cat ${sameFilters(filters, catFilters(c)) ? 'on' : ''}" data-dcat="${c.id}" ${off || missing ? 'disabled' : ''}><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span></button>`;
+    return `<button class="cat small-cat ${sameFilters(filters, catFilters(c)) ? 'on' : ''}" data-dcat="${esc(c.id)}" ${off || missing ? 'disabled' : ''}><span class="cat-icon">${c.icon}</span><span class="cat-name">${esc(c.name)}</span></button>`;
   }).join('');
   const bk = countBy(activePool(), (s) => [bucketOf(s)]);
   $('#d-buckets').innerHTML = BUCKETS.filter((b) => bk.get(b.id)).map((b) =>
@@ -1592,7 +1592,7 @@ function rebuildLivePool() {
 }
 $('#d-cats').addEventListener('click', (e) => {
   const b = e.target.closest('[data-dcat]'); if (!b || b.disabled) return;
-  filters = catFilters(CATEGORIES.find((c) => c.id === b.dataset.dcat)); saveFilters();
+  filters = catFilters(allCategories().find((c) => c.id === b.dataset.dcat)); saveFilters();
   if (rebuildLivePool()) toast('Fatto: dalla prossima canzone', 1500);
   renderDrawer();
 });

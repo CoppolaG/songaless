@@ -7,11 +7,13 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+// legge (senza valore) o salva; quando salva ritorna false se il browser non ha più spazio
 function store(key, val) {
   try {
     if (val === undefined) return JSON.parse(localStorage.getItem('sq.' + key));
     localStorage.setItem('sq.' + key, JSON.stringify(val));
-  } catch { return null; }
+    return true;
+  } catch { return val === undefined ? null : false; }
 }
 
 // normalizza un titolo per confrontarlo: minuscole, niente accenti, niente "(Remastered)", "- Live", "feat." ecc.
@@ -76,7 +78,15 @@ async function dzFind(artist, title) {
 /* ============ Mazzi ============ */
 let decks = store('decks') || {};
 let active = new Set(store('active') || Object.keys(decks));
-const saveDecks = () => { store('decks', decks); store('active', [...active]); };
+let storageWarned = false;
+const saveDecks = () => {
+  const ok = store('decks', decks) && store('active', [...active]);
+  if (!ok && !storageWarned) {
+    storageWarned = true;
+    alert('⚠️ La memoria del browser per questo sito è piena: le ultime modifiche ai mazzi NON sono state salvate e ricaricando andrebbero perse.\n\nEsporta subito i mazzi (Impostazioni → Mazzi e playlist → Esporta), poi togli qualche mazzo che non usi o le foto dei personaggi.');
+  }
+  return ok;
+};
 
 function addToDeck(name, songs) {
   name = name.trim() || 'Senza nome';
@@ -166,7 +176,8 @@ async function enrichAll() {
       const todo = [...byId.values()];
       const total = Object.values(decks).reduce((n, l) => n + l.length, 0);
       if (!todo.length) { enrichStatus(''); break; }
-      enrichStatus(`🔎 Sto catalogando anno e genere delle canzoni… ne mancano ${todo.length} (su ${total})`);
+      const mins = Math.max(1, Math.round((todo.length * 1.7) / 60));
+      enrichStatus(`🔎 Catalogate ${total - todo.length} canzoni su ${total} · ne mancano ${todo.length} (circa ${mins} min, solo mentre il sito è aperto)`);
       const copies = todo[0]; const s = copies[0];
       try {
         const [dzm, mbYear] = await Promise.all([deezerMeta(s), mbEarliestYear(s.artist, s.title)]);
@@ -565,16 +576,23 @@ const CATEGORIES = [
   { id: 'sensational', icon: '🎤', name: 'Sensational', desc: 'Rap americano', f: { decks: ['Sensational'] } },
   { id: 'chicche', icon: '💎', name: 'Chicche', desc: 'Le meno famose', f: { pop: 'deep' } },
 ];
+// categorie fisse + una per ogni mazzo che hai importato tu
+function allCategories() {
+  const base = new Set(Object.keys(window.STARTER_DECKS || {}));
+  const mine = Object.keys(decks).filter((n) => !base.has(n) && decks[n].length).sort()
+    .map((n) => ({ id: 'deck:' + n, icon: '📁', name: n, desc: `${decks[n].length} canzoni · tuo mazzo`, f: { decks: [n] } }));
+  return CATEGORIES.concat(mine);
+}
 const catFilters = (c) => ({ decks: [], decades: [], genres: [], artists: [], pop: 'all', buckets: [], ...structuredClone(c.f) });
 const sameFilters = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function renderFilters() {
   const pool = basePool();
-  $('#f-categories').innerHTML = CATEGORIES.map((c) => {
+  $('#f-categories').innerHTML = allCategories().map((c) => {
     const on = sameFilters(filters, catFilters(c));
     const missing = c.f.decks && !c.f.decks.some((n) => decks[n]);
-    return `<button class="cat ${on ? 'on' : ''}" data-cat="${c.id}" ${missing ? 'disabled title="Mazzo non presente"' : ''}>
-      <span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span><span class="cat-desc">${c.desc}</span></button>`;
+    return `<button class="cat ${on ? 'on' : ''}" data-cat="${esc(c.id)}" ${missing ? 'disabled title="Mazzo non presente"' : ''}>
+      <span class="cat-icon">${c.icon}</span><span class="cat-name">${esc(c.name)}</span><span class="cat-desc">${esc(c.desc)}</span></button>`;
   }).join('');
 
   const bk = countBy(activePool(), (s) => [bucketOf(s)]);
@@ -601,7 +619,7 @@ function renderFilters() {
 
   const n = filteredPool().length;
   const pending = pool.filter((s) => !s.meta).length;
-  $('#filter-count').textContent = `${n} canzoni pronte` + (pending ? ` · ${pending} ancora da catalogare` : '');
+  $('#filter-count').textContent = `${n} canzoni pronte` + (pending ? ` · ${pending} ancora da catalogare (in corso)` : '');
   renderSummary();
 }
 
@@ -611,7 +629,7 @@ $('#f-buckets').addEventListener('click', (e) => {
 });
 $('#f-categories').addEventListener('click', (e) => {
   const b = e.target.closest('[data-cat]'); if (!b || b.disabled) return;
-  filters = catFilters(CATEGORIES.find((c) => c.id === b.dataset.cat)); saveFilters();
+  filters = catFilters(allCategories().find((c) => c.id === b.dataset.cat)); saveFilters();
 });
 $('#f-decades').addEventListener('click', (e) => {
   const c = e.target.closest('[data-decade]'); if (!c) return;
